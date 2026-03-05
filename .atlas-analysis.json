@@ -1,0 +1,158 @@
+{
+  "projectType": "api-service",
+  "projectName": "MidOS",
+  "projectDescription": "Curated knowledge API for AI agents with 68 MCP tools, 200+ skill packs, semantic search over 670K vectors, and 5-layer validation pipeline.",
+  "theme": "aspen",
+  "primaryColor": "#b1b1b1",
+  "lightColor": "#3c3c3c",
+  "darkColor": "#e1e1e1",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/knowledge-pipeline",
+              "concepts/skill-packs",
+              "concepts/eureka-system",
+              "concepts/semantic-search"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/connecting-to-mcp",
+              "guides/search-strategies",
+              "guides/using-skills",
+              "guides/agent-handshake",
+              "guides/self-hosting"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/knowledge-layers",
+              "architecture/vector-store",
+              "architecture/authentication"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Search Tools",
+            "pages": [
+              "api/search/search-knowledge",
+              "api/search/semantic-search",
+              "api/search/hybrid-search",
+              "api/search/smart-search"
+            ]
+          },
+          {
+            "group": "Knowledge Tools",
+            "pages": [
+              "api/knowledge/get-skill",
+              "api/knowledge/list-skills",
+              "api/knowledge/get-eureka",
+              "api/knowledge/get-truth",
+              "api/knowledge/get-protocol"
+            ]
+          },
+          {
+            "group": "Agent Tools",
+            "pages": [
+              "api/agent/agent-handshake",
+              "api/agent/episodic-search",
+              "api/agent/episodic-store",
+              "api/agent/chunk-code"
+            ]
+          },
+          {
+            "group": "System Tools",
+            "pages": [
+              "api/system/hive-status",
+              "api/system/project-status",
+              "api/system/memory-stats"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Knowledge Base",
+            "pages": [
+              "resources/skill-catalog",
+              "resources/eureka-catalog",
+              "resources/truth-patches",
+              "resources/tech-stacks"
+            ]
+          },
+          {
+            "group": "Community",
+            "pages": [
+              "contributing",
+              "changelog",
+              "faq"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "68 MCP tools for knowledge access and semantic search",
+    "46,000+ curated knowledge chunks across 20+ tech stacks",
+    "200+ production-tested skill packs",
+    "383 EUREKA-validated breakthrough discoveries",
+    "Semantic search with LanceDB + Gemini embeddings (670K vectors, 3072-d)",
+    "5-layer validation pipeline (chunks → skills → truth → EUREKA → SOTA)",
+    "Personalized agent onboarding via agent_handshake",
+    "Hybrid search combining keyword + semantic with reranking",
+    "Self-hosted or cloud deployment via streamable HTTP",
+    "Episodic memory for agent learning and reflexion"
+  ],
+  "publicApiSurface": [
+    "search_knowledge",
+    "semantic_search",
+    "hybrid_search",
+    "smart_search",
+    "get_skill",
+    "list_skills",
+    "get_eureka",
+    "get_truth",
+    "get_protocol",
+    "agent_handshake",
+    "episodic_search",
+    "episodic_store",
+    "chunk_code",
+    "hive_status",
+    "project_status",
+    "memory_stats",
+    "research_youtube",
+    "pool_signal",
+    "pool_status",
+    "agent_bootstrap"
+  ]
+}
