@@ -1,0 +1,464 @@
+---
+title: "Skill Packs"
+description: "Production-tested patterns organized by technology stack"
+---
+
+# Skill Packs
+
+Skill packs are **Layer 2** in MidOS's [Knowledge Pipeline](/concepts/knowledge-pipeline). They represent production-tested patterns, best practices, and implementation guides organized by technology stack.
+
+## What Are Skill Packs?
+
+Skill packs are:
+- **Stack-specific**: FastAPI, TypeScript, React, PostgreSQL, etc.
+- **Production-tested**: Validated in real-world projects
+- **Version-controlled**: Include compatibility matrices
+- **Reusable**: Apply across multiple projects
+- **Promoted from chunks**: Extracted when patterns appear 3+ times
+
+Skill packs are **NOT**:
+- Generic tutorials or beginner guides (those are discarded at Layer 1)
+- One-off solutions (those stay as chunks)
+- Theoretical patterns without production validation
+
+## Directory Structure
+
+```
+knowledge/skills/
+├── # Stack-specific skill packs
+├── fastapi/
+│   ├── SKILL.md
+│   └── compatibility.json (optional)
+├── typescript_mastery/
+│   ├── SKILL.md
+│   └── examples/
+├── react_patterns_hooks/
+│   └── SKILL.md
+│
+├── # Single-file skills
+├── postgresql.md
+├── docker-containerization.md
+├── redis_caching_patterns.md
+├── prisma_v7.md
+├── nestjs_v11.md
+└── ... (74 more files)
+```
+
+### Multi-file vs Single-file
+
+**Multi-file structure** (complex skills):
+```
+skills/
+└── hive_parallelism_stack/
+    ├── SKILL.md              # Main documentation
+    ├── compatibility.json    # Version matrix
+    ├── examples/
+    │   ├── basic_pattern.py
+    │   └── advanced_usage.py
+    └── tests/
+        └── test_patterns.py
+```
+
+**Single-file structure** (focused skills):
+```
+skills/
+└── redis_caching_patterns.md  # All content in one file
+```
+
+## Skill Pack Metadata
+
+Every skill pack includes frontmatter metadata:
+
+```yaml
+---
+name: "fastapi-modern-patterns"
+version: "1.0.0"
+stack: "fastapi"
+pydantic_version: "v2"
+fastapi_version: "0.109+"
+tags: ["fastapi", "pydantic-v2", "async", "production", "testing", "security"]
+confidence: 0.95
+last_updated: "2026-02-10"
+sources:
+  - url: "https://fastapi.tiangolo.com/"
+    type: "official"
+    confidence: 1.0
+  - url: "https://docs.pydantic.dev/latest/"
+    type: "official"
+    confidence: 1.0
+---
+```
+
+### Key Metadata Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | ✓ | Unique identifier (kebab-case) |
+| `version` | ✓ | Semantic version (MAJOR.MINOR.PATCH) |
+| `stack` | ✓ | Primary technology (fastapi, react, postgres, etc.) |
+| `tags` | ✓ | Searchable keywords |
+| `confidence` | ✓ | 0.0-1.0 (production tested = 0.9+) |
+| `last_updated` | ✓ | ISO date (YYYY-MM-DD) |
+| `sources` |  | Documentation/research URLs |
+| `{stack}_version` |  | Version constraints (fastapi_version, node_version, etc.) |
+| `type` |  | foundational, specialized, integration |
+| `category` |  | web_development, data, infrastructure, etc. |
+
+## Compatibility Matrix
+
+For skills with complex dependencies, use `compatibility.json`:
+
+```json
+{
+  "skill": "fastapi-modern-patterns",
+  "version": "1.0.0",
+  "compatibility": {
+    "fastapi": {
+      "min": "0.109.0",
+      "max": "0.120.0",
+      "tested": ["0.109.0", "0.115.0", "0.120.0"],
+      "recommended": "0.115.0"
+    },
+    "pydantic": {
+      "min": "2.0.0",
+      "max": "2.9.0",
+      "tested": ["2.5.0", "2.7.0", "2.9.0"],
+      "recommended": "2.7.0"
+    },
+    "python": {
+      "min": "3.10",
+      "max": "3.12",
+      "tested": ["3.10", "3.11", "3.12"],
+      "recommended": "3.11"
+    }
+  },
+  "breaking_changes": [
+    {
+      "version": "0.110.0",
+      "description": "Response model validation changes",
+      "migration_guide": "https://fastapi.tiangolo.com/release-notes/#0110"
+    }
+  ],
+  "peer_dependencies": [
+    "uvicorn>=0.24.0",
+    "python-multipart>=0.0.6"
+  ]
+}
+```
+
+## Skill Pack Categories
+
+### Backend Frameworks
+- `fastapi/` — FastAPI + Pydantic v2 patterns
+- `django_v5.md` — Django 5.x patterns
+- `nestjs_v11.md` — NestJS TypeScript patterns
+- `laravel.md` — Laravel PHP patterns
+- `symfony.md` — Symfony PHP patterns
+
+### Frontend Frameworks
+- `react_patterns_hooks/` — React hooks and patterns
+- `angular.md` — Angular patterns
+- `svelte-v5-patterns.md` — Svelte 5 runes
+- `remix_v2.md` — Remix framework
+- `astro_v5_patterns.md` — Astro SSG/SSR
+
+### TypeScript/JavaScript
+- `typescript_mastery/` — Advanced TypeScript patterns
+- `deno_v2_patterns.md` — Deno runtime
+- `bun_runtime.md` — Bun runtime
+- `effect_ts_patterns.md` — Effect-TS functional patterns
+
+### Databases & ORMs
+- `postgresql.md` — PostgreSQL best practices
+- `mongodb_document_db.md` — MongoDB patterns
+- `mysql.md` — MySQL optimization
+- `prisma_v7.md` — Prisma ORM (latest)
+- `drizzle_orm.md` — Drizzle ORM patterns
+
+### Infrastructure & DevOps
+- `docker-containerization.md` — Docker best practices
+- `kubernetes_orchestration.md` — K8s patterns
+- `terraform_iac.md` — Infrastructure as Code
+- `github_actions_cicd.md` — CI/CD pipelines
+
+### AI & ML Stacks
+- `hive_parallelism_stack/` — MidOS parallelism patterns
+- `hive_mesh_grpc/` — gRPC mesh communication
+- `lora_qlora_training.md` — Fine-tuning patterns
+- `evidently_drift_detection.md` — ML monitoring
+
+### API & Communication
+- `graphql_api_design.md` — GraphQL patterns
+- `trpc_end_to_end_typesafety.md` — tRPC E2E types
+- `grpc_patterns.md` — gRPC best practices
+- `vercel_ai_sdk_streaming.md` — Streaming AI responses
+
+### Caching & Search
+- `redis_caching_patterns.md` — Redis strategies
+- `elasticsearch_search.md` — Elasticsearch patterns
+- `lancedb_versioning.md` — LanceDB vector store
+
+### Testing & Quality
+- `playwright_patterns.md` — E2E testing with Playwright
+- `testing_python_best_practices.md` — Python test patterns
+- `structlog_production_logging.md` — Structured logging
+
+## How Skills Are Created
+
+### 1. Pattern Recognition
+
+When the same pattern appears in 3+ chunks across different contexts:
+
+```
+Chunk 1: "FastAPI async routes with dependency injection..."
+Chunk 2: "FastAPI background tasks using Depends()..."
+Chunk 3: "FastAPI testing with async client fixtures..."
+
+→ Extract common pattern → Create skill pack
+```
+
+### 2. Skill Extraction
+
+Patterns are consolidated into a skill pack:
+
+```markdown
+# FastAPI Dependency Injection Patterns
+
+## Context
+FastAPI's Depends() provides dependency injection for:
+- Database connections
+- Authentication/authorization
+- Configuration injection
+- Background task queuing
+
+## Pattern
+\`\`\`python
+from fastapi import Depends, FastAPI
+from sqlalchemy.orm import Session
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.get("/users/{user_id}")
+async def get_user(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    return db.query(User).filter(User.id == user_id).first()
+\`\`\`
+
+## Testing
+\`\`\`python
+def override_get_db():
+    return mock_db
+
+app.dependency_overrides[get_db] = override_get_db
+\`\`\`
+
+## Production Considerations
+- Connection pooling with SQLAlchemy
+- Timeout configuration
+- Health checks
+```
+
+### 3. Version Control
+
+Skills evolve over time:
+
+```
+v1.0.0 (2026-01-15): Initial FastAPI 0.109 patterns
+v1.1.0 (2026-02-10): Added Pydantic v2 examples
+v1.2.0 (2026-03-01): WebSocket dependency injection
+```
+
+### 4. Validation
+
+Before promotion from chunk to skill:
+- ✓ Production-tested in real project
+- ✓ Works across multiple codebases
+- ✓ Has clear version constraints
+- ✓ Includes working examples
+- ✓ Documents edge cases/gotchas
+
+## Current Skill Inventory
+
+As of 2026-03: **79 active skill packs**
+
+### Top Skills by Query Frequency
+
+| Skill | Stack | Confidence | Last Updated |
+|-------|-------|------------|-------------|
+| `typescript_mastery` | TypeScript | 0.95 | 2026-02-10 |
+| `fastapi` | FastAPI | 0.95 | 2026-02-10 |
+| `react_patterns_hooks` | React | 0.93 | 2026-02-10 |
+| `prisma_v7` | Prisma ORM | 0.90 | 2026-01-20 |
+| `docker-containerization` | Docker | 0.92 | 2026-01-15 |
+| `postgresql` | PostgreSQL | 0.94 | 2026-02-05 |
+| `redis_caching_patterns` | Redis | 0.91 | 2026-01-28 |
+
+### Emerging Skills (< 30 days old)
+
+- `astro_v5_patterns` — Astro 5.x content collections
+- `deno_v2_patterns` — Deno 2.0 runtime features
+- `svelte-v5-patterns` — Svelte 5 runes system
+
+## Promotion to Truth Layer
+
+Skills can be promoted to [Truth](/concepts/knowledge-pipeline#layer-3-truth) when they meet all criteria:
+
+1. **WHY documented**: Not just "how" but "why this pattern works"
+2. **Purpose clear**: What problem it solves, in what context
+3. **Contrast tested**: Compared against alternatives, validated empirically
+
+Example promotion:
+
+```
+Skill: redis_caching_patterns.md
+→ Truth: TRUTH_CACHE_INVALIDATION_STRATEGIES
+
+Reason: Documented why LRU > LFU for API caching
+        (access patterns are bursty, not uniform)
+Contrast: Tested against FIFO, LRU, LFU, TTL-only
+ROI: 35% reduction in cache misses in production
+```
+
+## Usage in MidOS
+
+### Query Skills
+
+```python
+from midos import search_memory
+
+# Search skills layer
+results = search_memory(
+    query="async error handling patterns",
+    top_k=3,
+    metadata_filter={"layer": "skills", "stack": "fastapi"}
+)
+
+for result in results:
+    print(f"{result['source']}: {result['text'][:200]}")
+```
+
+### Load Skill Pack
+
+```python
+from midos import get_skill
+
+# Get full skill content
+skill = get_skill("fastapi-modern-patterns")
+print(skill["content"])  # Full markdown
+print(skill["metadata"])  # Frontmatter data
+print(skill["examples"])  # Code examples
+```
+
+### CLI Usage
+
+```bash
+# List all skills
+midos skills list
+
+# Search skills by stack
+midos skills search --stack fastapi
+
+# Show skill details
+midos skills show fastapi-modern-patterns
+
+# Check compatibility
+midos skills compat fastapi-modern-patterns --fastapi 0.115.0
+```
+
+## Best Practices
+
+### For Skill Authors
+
+1. **Focus on patterns, not tutorials**
+   - ❌ "How to install FastAPI"
+   - ✓ "FastAPI dependency injection patterns"
+
+2. **Include version constraints**
+   - Always specify min/max versions
+   - Document breaking changes
+   - Test against recommended versions
+
+3. **Provide working examples**
+   - Full code snippets that run
+   - Include imports and setup
+   - Show both basic and advanced usage
+
+4. **Document edge cases**
+   - Known limitations
+   - Common pitfalls
+   - Workarounds and alternatives
+
+5. **Link to sources**
+   - Official documentation
+   - GitHub issues/discussions
+   - Production war stories
+
+### For Skill Consumers
+
+1. **Check compatibility first**
+   - Verify version constraints match your stack
+   - Review breaking changes
+   - Test in dev environment
+
+2. **Adapt to your context**
+   - Skills are patterns, not copy-paste solutions
+   - Adjust for your architecture
+   - Consider your constraints (scale, team, timeline)
+
+3. **Report issues**
+   - If pattern doesn't work, file issue
+   - Include versions, error logs
+   - Suggest improvements
+
+4. **Contribute improvements**
+   - Found a better approach? Submit PR
+   - Tested with new versions? Update compatibility
+   - Discovered edge case? Document it
+
+## Versioning Strategy
+
+Skills follow semantic versioning:
+
+- **MAJOR** (X.0.0): Breaking changes, stack version bump
+- **MINOR** (x.Y.0): New patterns, backward-compatible additions
+- **PATCH** (x.y.Z): Bug fixes, clarifications, small improvements
+
+Examples:
+
+```
+1.0.0 → 1.1.0: Added WebSocket patterns (backward-compatible)
+1.1.0 → 2.0.0: FastAPI 0.109 → 0.115, breaking changes
+2.0.0 → 2.0.1: Fixed typo in example code
+```
+
+## Deprecation Policy
+
+Skills are deprecated when:
+- Underlying stack reaches EOL
+- Better pattern discovered (promote to EUREKA)
+- No queries for 90 days
+- Contradicted by new evidence
+
+Deprecated skills:
+1. Moved to `knowledge/skills/_deprecated/`
+2. Removed from vector search index
+3. Kept for historical reference
+
+## Related Concepts
+
+- [Knowledge Pipeline](/concepts/knowledge-pipeline) — How skills fit in the 5-layer system
+- [EUREKA System](/concepts/eureka-system) — Skills promoted with measured ROI
+- [Semantic Search](/concepts/semantic-search) — How skills are retrieved
+
+## Implementation Reference
+
+- Skill directory: `source/knowledge/skills/`
+- Skill loader: `source/hive_commons/src/hive_commons/skills.py`
+- Search integration: `source/hive_commons/src/hive_commons/vector_store.py`

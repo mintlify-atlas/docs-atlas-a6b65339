@@ -1,0 +1,224 @@
+---
+title: System Architecture
+description: High-level architecture of MidOS - FastMCP server, knowledge layers, and vector search
+---
+
+MidOS is a specialized MCP (Model Context Protocol) server that provides curated, validated developer knowledge to AI coding agents. This page covers the high-level system architecture.
+
+## System Components
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      MCP Clients                            │
+│  (Claude Code, Cursor, Windsurf, Cline, Claude Desktop)   │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ MCP Protocol
+                       │ (stdio or streamable-http)
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              FastMCP Server (midos_mcp.py)                 │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Auth Middleware (API Key + Rate Limiting)           │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  18 MCP Tools (search, get_skill, semantic_search)  │  │
+│  └──────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Resources (midos://skill/{skill_name})             │  │
+│  └──────────────────────────────────────────────────────┘  │
+└────────────┬─────────────────────────────┬──────────────────┘
+             │                             │
+             ▼                             ▼
+  ┌──────────────────┐         ┌─────────────────────────┐
+  │  Knowledge Base  │         │  Vector Store (LanceDB) │
+  │                  │         │  - Gemini embeddings    │
+  │  knowledge/      │         │  - 3072-d vectors       │
+  │  ├── chunks/     │         │  - Hybrid search (RRF)  │
+  │  ├── skills/     │◄────────┤  - BM25 FTS indexing   │
+  │  ├── truth/      │         │  - Decay scoring        │
+  │  ├── EUREKA/     │         └─────────────────────────┘
+  │  └── SOTA/       │
+  └──────────────────┘
+```
+
+## FastMCP Server
+
+The core server is implemented in `modules/mcp_server/midos_mcp.py` using [FastMCP](https://github.com/jlowin/fastmcp), a modern framework for building MCP servers.
+
+### Transport Modes
+
+MidOS supports **dual transport**:
+
+- **stdio** (default): Standard input/output for local CLI tools like Claude Code
+- **streamable-http**: HTTP-based transport for remote connections and web clients
+
+**Running the server:**
+
+```bash
+# stdio mode (default, backward compatible)
+python -m modules.mcp_server.midos_mcp
+
+# HTTP mode (remote, streamable)
+python -m modules.mcp_server.midos_mcp --http --port 8419
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:920-942`
+
+### MCP Tools (18 total)
+
+The server exposes 18 tools organized by tier:
+
+**Community Tier (free, no API key required):**
+- `search_knowledge` - Keyword search across all knowledge layers
+- `list_skills` - Browse 200+ skill packs with optional stack filtering
+- `get_skill` - Get complete skill document by name
+- `get_protocol` - Get protocol/pattern documentation
+- `hive_status` - System health and statistics
+- `project_status` - Live dashboard + quick-start guide
+- `agent_handshake` - Personalized onboarding
+- `agent_bootstrap` - Generic onboarding (deprecated)
+
+**Dev Tier (requires API key):**
+- `semantic_search` - Vector search using LanceDB + Gemini embeddings
+- `get_eureka` - Access EUREKA breakthrough documents
+- `get_truth` - Get truth patch documents
+- `research_youtube` - Queue videos for research
+- `chunk_code` - AST-based code chunking
+- `memory_stats` - Vector store statistics
+- `pool_status` - Multi-instance coordination status
+- `episodic_search` - Search past agent experiences
+
+**Admin Tier:**
+- `episodic_store` - Store new episodic memories
+- `pool_signal` - Signal to multi-instance pool
+
+Reference: `modules/mcp_server/midos_mcp.py:30-46`
+
+### MCP Resources
+
+MidOS exposes one resource type:
+
+- `midos://skill/{skill_name}` - Read skill files as MCP resources
+
+Resources include path traversal protection and tier-based gating (community tier gets 400-char preview).
+
+Reference: `modules/mcp_server/midos_mcp.py:794-846`
+
+## Knowledge Storage
+
+The knowledge base is organized in the `knowledge/` directory with a **5-layer quality pipeline**:
+
+```
+staging/ → chunks/ → skills/ → truth/ → EUREKA/ → SOTA/
+ (entry)    (L1)      (L2)      (L3)     (L4)      (L5)
+```
+
+See [Knowledge Layers](/architecture/knowledge-layers) for detailed explanation.
+
+### Directory Structure
+
+```
+knowledge/
+├── chunks/     # L1: 88 curated knowledge files
+├── skills/     # L2: 78 organized skill directories
+├── truth/      # L3: 2 empirical patches (50 items total in production)
+├── EUREKA/     # L4: 2 catalog files (383 items in production)
+└── SOTA/       # L5: Best-in-class patterns (140 items in production)
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:79-86`
+
+## Vector Store
+
+MidOS uses **LanceDB** with **Gemini embeddings** for semantic search:
+
+- **Embedding model**: `gemini-embedding-001` (3072 dimensions)
+- **Search modes**: Vector-only, keyword-only (BM25), or hybrid (RRF fusion)
+- **Indexing**: Full-text search (FTS) index on text column
+- **Caching**: Query embedding cache (5-minute TTL, LRU eviction)
+- **Memory decay**: Importance-weighted exponential decay for knowledge lifecycle
+
+See [Vector Store](/architecture/vector-store) for implementation details.
+
+## Tech Stack
+
+| Component | Technology | Version/Details |
+|-----------|-----------|------------------|
+| **MCP Framework** | FastMCP | 2.x (streamable-http) |
+| **Language** | Python | 3.10+ |
+| **Vector Database** | LanceDB | With pandas integration |
+| **Embeddings** | Google Gemini | `gemini-embedding-001` (3072-d) |
+| **Search** | Hybrid | Vector + BM25 FTS with RRF fusion |
+| **Auth** | Custom middleware | API key + rate limiting |
+| **Deployment** | Docker | Coolify auto-deploy |
+
+## Configuration
+
+MidOS uses the `hive_commons` shared library for unified configuration:
+
+```python
+from hive_commons.config import L1_ROOT, L1_KNOWLEDGE, L1_SYNAPSE
+from hive_commons.vector_store import search_memory, get_memory_stats
+from hive_commons.semantic_cache import check_cache
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:68-86`
+
+### Key Paths
+
+- `L1_ROOT` - MidOS root directory
+- `L1_KNOWLEDGE` - Knowledge base directory (`knowledge/`)
+- `L1_SYNAPSE` - Synapse directory for state and coordination
+- `LANCE_DB_URI` - LanceDB database location
+
+## Health Endpoints
+
+The HTTP server includes health check endpoints:
+
+**Liveness probe** (`/health`):
+```json
+{
+  "status": "ok",
+  "server": "midos",
+  "uptime_seconds": 1234.5,
+  "timestamp": "2026-03-05T12:34:56.789Z"
+}
+```
+
+**Readiness probe** (`/health/ready`):
+```json
+{
+  "status": "ready",
+  "checks": {
+    "knowledge": {"status": "up", "chunks": 88},
+    "vector_store": {"status": "up", "total_chunks": 670000},
+    "skills": {"status": "up", "count": 78}
+  }
+}
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:853-913`
+
+## Performance Characteristics
+
+### Search Latency
+
+- **Keyword search**: ~50ms (direct file scanning)
+- **Vector search**: ~200ms (LanceDB query + embedding)
+- **Hybrid search**: ~250ms (RRF fusion of both)
+- **Cached query**: ~1ms (query embedding cache hit)
+
+### Embedding Performance
+
+- **Original**: ~1200ms/text (sequential API calls)
+- **Batch only**: ~35ms/text (50 texts per call)
+- **Batch + concurrent**: ~19ms/text (4 workers)
+- **Cache hit**: ~0ms (no API call)
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:86-103`
+
+## Next Steps
+
+- [Knowledge Layers](/architecture/knowledge-layers) - Detailed explanation of the 5-layer pipeline
+- [Vector Store](/architecture/vector-store) - LanceDB implementation and search algorithms
+- [Authentication](/architecture/authentication) - API key system and rate limiting

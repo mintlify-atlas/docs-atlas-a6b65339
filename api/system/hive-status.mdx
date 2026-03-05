@@ -1,0 +1,132 @@
+---
+title: 'hive_status'
+description: 'Get current status of the MidOS hive system'
+---
+
+## Function Signature
+
+```python
+async def hive_status() -> str
+```
+
+## Description
+
+Returns the current health and status of the MidOS hive system, including file counts across all knowledge directories, pearl diver state, and recent pearl discoveries.
+
+This tool provides a quick snapshot of:
+- Total knowledge files across all directories
+- Skills and protocols inventory
+- Pearl diver scanning progress
+- Recently discovered pearls
+
+## When to Use
+
+Use `hive_status` when you need to:
+- Check the overall health of the MidOS system
+- Monitor knowledge base growth over time
+- Verify pearl diver is actively scanning
+- Debug file count discrepancies
+- Get a high-level system overview
+
+For detailed knowledge statistics and tool guides, use [`project_status`](/api/system/project-status) instead.
+
+## Parameters
+
+This tool takes no parameters.
+
+## Response Structure
+
+Returns a JSON string with the following structure:
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp when the status was generated
+</ResponseField>
+
+<ResponseField name="midos_root" type="string" required>
+  Absolute path to the MidOS root directory
+</ResponseField>
+
+<ResponseField name="knowledge_files" type="integer" required>
+  Total count of `.md` files in the knowledge directory (recursive)
+</ResponseField>
+
+<ResponseField name="skills_count" type="integer" required>
+  Number of skill files in the skills directory
+</ResponseField>
+
+<ResponseField name="protocols_count" type="integer" required>
+  Number of protocol files in the protocols directory
+</ResponseField>
+
+<ResponseField name="pearl_diver" type="object">
+  Pearl diver scanning statistics (only present if state file exists)
+  
+  <ResponseField name="files_scanned" type="integer">
+    Number of files processed by the pearl diver
+  </ResponseField>
+  
+  <ResponseField name="pearls_found" type="integer">
+    Total pearls extracted from scanned files
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="recent_pearls" type="array" required>
+  List of the 3 most recently created pearl files
+  
+  <ResponseField name="file" type="string">
+    Name of the pearl JSON file
+  </ResponseField>
+  
+  <ResponseField name="count" type="integer">
+    Number of pearls in this file
+  </ResponseField>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "timestamp": "2026-03-05T14:23:45.123456",
+  "midos_root": "/home/user/midos",
+  "knowledge_files": 32847,
+  "skills_count": 156,
+  "protocols_count": 42,
+  "pearl_diver": {
+    "files_scanned": 8923,
+    "pearls_found": 15234
+  },
+  "recent_pearls": [
+    {
+      "file": "2026-03-05_python_patterns.json",
+      "count": 67
+    },
+    {
+      "file": "2026-03-04_react_hooks.json",
+      "count": 43
+    },
+    {
+      "file": "2026-03-04_fastapi_design.json",
+      "count": 89
+    }
+  ]
+}
+```
+
+## Example Usage
+
+```python
+# Get system health snapshot
+status = await hive_status()
+print(status)
+
+# Parse and check specific metrics
+import json
+data = json.loads(status)
+print(f"Total knowledge files: {data['knowledge_files']}")
+print(f"Pearl diver progress: {data['pearl_diver']['files_scanned']} files")
+```
+
+## Related Tools
+
+- [`project_status`](/api/system/project-status) - Comprehensive dashboard with live stats and tool guide
+- [`memory_stats`](/api/system/memory-stats) - Vector store and LanceDB metrics

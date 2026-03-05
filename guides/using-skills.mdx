@@ -1,0 +1,518 @@
+---
+title: "Using Skills"
+description: "Browse, filter, and apply production-tested skill packs from MidOS"
+---
+
+MidOS organizes curated knowledge into **skill packs**: structured, validated patterns for specific technologies and frameworks. Each skill is battle-tested in production projects.
+
+## What Are Skills?
+
+Skills are comprehensive guides that include:
+- **Production patterns**: Real-world implementations, not just theory
+- **Code examples**: Copy-paste-ready snippets
+- **Best practices**: Validated by empirical evidence
+- **Common pitfalls**: Mistakes to avoid
+- **Version-specific**: Tagged with framework versions (e.g., React 19, Django 5)
+
+### Skill Structure
+
+```
+skills/
+├── react_19_comprehensive/
+│   ├── SKILL.md                  # Main guide
+│   ├── compatibility.json        # Supported stacks
+│   ├── examples/                 # Code samples
+│   └── tests/                    # Validation tests
+└── fastapi_patterns/
+    ├── SKILL.md
+    └── compatibility.json
+```
+
+Each skill includes:
+- **SKILL.md**: Complete documentation
+- **compatibility.json**: Languages, frameworks, versions
+- **examples/**: Working code samples
+- **tests/**: Validation and test patterns
+
+## Browsing Skills
+
+### List All Skills
+
+Get a complete inventory:
+
+```python
+list_skills()
+```
+
+**Output:**
+```
+Available skills (203):
+- react_19_comprehensive
+- nextjs_16_app_router
+- fastapi_patterns
+- django_v5_best_practices
+- postgresql_performance
+- redis_caching_patterns
+- kubernetes_orchestration
+- typescript_mastery
+...
+```
+
+### Filter by Stack
+
+Find skills for your technology stack:
+
+<CodeGroup>
+```python React/TypeScript
+list_skills(stack="react,typescript")
+```
+
+```python Python Backend
+list_skills(stack="python,fastapi,postgresql")
+```
+
+```python Full Stack
+list_skills(stack="nextjs,typescript,django,postgresql")
+```
+
+```python DevOps
+list_skills(stack="docker,kubernetes,terraform")
+```
+</CodeGroup>
+
+**How filtering works:**
+1. Checks `compatibility.json` for explicit stack matches
+2. Scans skill names for stack keywords
+3. Ranks by relevance score (2 points for compatibility, 1 point for name match)
+4. Returns sorted list
+
+### Search by Keyword
+
+Filter skills by name:
+
+```python
+# Find all React-related skills
+list_skills(filter="react")
+
+# Find caching skills
+list_skills(filter="cache")
+
+# Find testing skills
+list_skills(filter="test")
+```
+
+## Fetching Skill Content
+
+### Get Full Skill
+
+Retrieve a complete skill document:
+
+```python
+get_skill("fastapi_patterns")
+```
+
+**Returns:**
+```markdown
+# FastAPI Patterns — Production-Ready API Development
+
+## Overview
+
+Production patterns for FastAPI 0.109+. Covers dependency injection,
+background tasks, WebSockets, and deployment strategies.
+
+## Dependency Injection
+
+### Basic Dependencies
+
+```python
+from fastapi import Depends, FastAPI
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.get("/users")
+def read_users(db: Session = Depends(get_db)):
+    return db.query(User).all()
+```
+...
+```
+
+### Browse Skill Examples
+
+Skills often include an `examples/` directory. Use file reading tools to explore:
+
+```python
+# List examples
+read_file("skills/fastapi_patterns/examples/")
+
+# Read specific example
+read_file("skills/fastapi_patterns/examples/websocket_chat.py")
+```
+
+## Understanding Compatibility
+
+Each skill declares its compatibility in `compatibility.json`:
+
+```json compatibility.json
+{
+  "languages": ["python"],
+  "frameworks": ["fastapi"],
+  "versions": {
+    "fastapi": ">=0.100.0",
+    "python": ">=3.10"
+  },
+  "dependencies": [
+    "pydantic>=2.0",
+    "uvicorn>=0.20"
+  ],
+  "platforms": ["linux", "macos", "windows"],
+  "tags": ["api", "web", "async", "backend"]
+}
+```
+
+### Checking Compatibility
+
+Before applying a skill, verify it matches your environment:
+
+```python
+# Get skill metadata
+get_skill("django_v5_best_practices")
+
+# Look for version requirements in the skill header
+# Example output:
+# "Requires: Django >=5.0, Python >=3.11"
+```
+
+## Popular Skill Packs
+
+### Frontend
+
+<CardGroup cols={2}>
+  <Card title="react_19_comprehensive" icon="react">
+    **React 19**: Server Components, Actions, useOptimistic, Suspense patterns.
+    
+    ```python
+    get_skill("react_19_comprehensive")
+    ```
+  </Card>
+  
+  <Card title="nextjs_16_app_router" icon="N">
+    **Next.js 16**: App Router, Server Actions, streaming, caching strategies.
+    
+    ```python
+    get_skill("nextjs_16_app_router")
+    ```
+  </Card>
+  
+  <Card title="typescript_mastery" icon="code">
+    **TypeScript**: Advanced types, generics, utility types, type guards.
+    
+    ```python
+    get_skill("typescript_mastery")
+    ```
+  </Card>
+  
+  <Card title="tailwindcss_v4" icon="palette">
+    **Tailwind CSS v4**: New features, performance optimization, custom plugins.
+    
+    ```python
+    get_skill("tailwindcss_v4")
+    ```
+  </Card>
+</CardGroup>
+
+### Backend
+
+<CardGroup cols={2}>
+  <Card title="fastapi_patterns" icon="bolt">
+    **FastAPI**: Dependency injection, background tasks, WebSockets, testing.
+    
+    ```python
+    get_skill("fastapi_patterns")
+    ```
+  </Card>
+  
+  <Card title="django_v5" icon="server">
+    **Django 5**: ORM patterns, async views, middleware, security.
+    
+    ```python
+    get_skill("django_v5")
+    ```
+  </Card>
+  
+  <Card title="nestjs_v11" icon="N">
+    **NestJS 11**: Modules, providers, guards, interceptors, microservices.
+    
+    ```python
+    get_skill("nestjs_v11")
+    ```
+  </Card>
+  
+  <Card title="graphql_federation" icon="diagram-project">
+    **GraphQL Federation**: Schema stitching, resolvers, caching, N+1 prevention.
+    
+    ```python
+    get_skill("graphql_federation")
+    ```
+  </Card>
+</CardGroup>
+
+### Data & Caching
+
+<CardGroup cols={2}>
+  <Card title="postgresql_performance" icon="database">
+    **PostgreSQL**: Indexing, query optimization, JSONB, partitioning.
+    
+    ```python
+    get_skill("postgresql_performance")
+    ```
+  </Card>
+  
+  <Card title="redis_caching_patterns" icon="memory">
+    **Redis**: Cache strategies, pub/sub, Lua scripting, key design.
+    
+    ```python
+    get_skill("redis_caching_patterns")
+    ```
+  </Card>
+  
+  <Card title="prisma_v7" icon="cylinder">
+    **Prisma 7**: Schema design, migrations, optimistic locking, relations.
+    
+    ```python
+    get_skill("prisma_v7")
+    ```
+  </Card>
+  
+  <Card title="lancedb_vector_search" icon="magnifying-glass">
+    **LanceDB**: Vector search, embeddings, hybrid search, indexing.
+    
+    ```python
+    get_skill("lancedb_vector_search")
+    ```
+  </Card>
+</CardGroup>
+
+### DevOps & Infrastructure
+
+<CardGroup cols={2}>
+  <Card title="kubernetes_orchestration" icon="cube">
+    **Kubernetes**: Deployments, services, ingress, autoscaling, health checks.
+    
+    ```python
+    get_skill("kubernetes_orchestration")
+    ```
+  </Card>
+  
+  <Card title="docker_best_practices" icon="docker">
+    **Docker**: Multi-stage builds, layer caching, security, optimization.
+    
+    ```python
+    get_skill("docker_best_practices")
+    ```
+  </Card>
+  
+  <Card title="github_actions_ci" icon="github">
+    **GitHub Actions**: Workflows, matrix builds, caching, secrets.
+    
+    ```python
+    get_skill("github_actions_ci")
+    ```
+  </Card>
+  
+  <Card title="terraform_aws" icon="cloud">
+    **Terraform + AWS**: IaC patterns, modules, state management, best practices.
+    
+    ```python
+    get_skill("terraform_aws")
+    ```
+  </Card>
+</CardGroup>
+
+## Applying Skills to Your Project
+
+<Steps>
+  <Step title="Identify your need">
+    What problem are you solving?
+    
+    ```python
+    # Example: Need to add caching to API
+    semantic_search("API response caching strategies")
+    ```
+  </Step>
+  
+  <Step title="Find relevant skills">
+    Filter by your stack:
+    
+    ```python
+    list_skills(stack="fastapi,redis")
+    # Returns: redis_caching_patterns, fastapi_patterns
+    ```
+  </Step>
+  
+  <Step title="Fetch the skill">
+    ```python
+    get_skill("redis_caching_patterns")
+    ```
+  </Step>
+  
+  <Step title="Review compatibility">
+    Check version requirements in the skill header.
+  </Step>
+  
+  <Step title="Implement the pattern">
+    Copy code examples and adapt to your project.
+  </Step>
+  
+  <Step title="Test thoroughly">
+    Skills include test patterns — use them!
+  </Step>
+</Steps>
+
+## Combining Multiple Skills
+
+Many projects benefit from combining skills:
+
+```python
+# Example: Building a production API
+get_skill("fastapi_patterns")           # API structure
+get_skill("postgresql_performance")     # Database optimization
+get_skill("redis_caching_patterns")     # Response caching
+get_skill("docker_best_practices")      # Containerization
+get_skill("kubernetes_orchestration")   # Deployment
+```
+
+## Skill Tiers
+
+Skills are organized by quality tier:
+
+- **L2 (Skills)**: Curated, validated, version-tagged
+- **L3 (Truth)**: Empirically verified with evidence (50 items)
+- **L4 (EUREKA)**: Breakthrough discoveries with measured ROI (383 items)
+- **L5 (SOTA)**: State-of-the-art, currently unimprovable (140 items)
+
+Access higher tiers:
+
+```python
+# Get validated truth patch
+get_truth("qlora_myths")  # L3
+
+# Get breakthrough discovery
+get_eureka("semantic_cache_response")  # L4
+
+# Get SOTA pattern (Pro tier)
+get_aotc("mcp_streaming")  # L5
+```
+
+## Skill Versioning
+
+Skills track framework versions:
+
+```
+react_19_comprehensive     # React 19 specific
+react_18_hooks             # React 18 (legacy)
+nextjs_16_app_router       # Next.js 16
+nextjs_14_pages_router     # Next.js 14 (legacy)
+django_v5                  # Django 5
+django_v4                  # Django 4 (LTS)
+```
+
+<Tip>
+Always prefer the latest version skill unless you're on an LTS version.
+</Tip>
+
+## Creating Your Own Skills
+
+Skills are community-contributed. To add a skill:
+
+<Steps>
+  <Step title="Test in production">
+    Only submit patterns you've validated in real projects.
+  </Step>
+  
+  <Step title="Document thoroughly">
+    Include code examples, edge cases, and version requirements.
+  </Step>
+  
+  <Step title="Submit to MidOS">
+    Open an issue or PR at [github.com/MidOSresearch/midos](https://github.com/MidOSresearch/midos).
+  </Step>
+  
+  <Step title="Review process">
+    MidOS maintainers validate, cross-check, and assign tier.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Skill not found">
+    **Cause**: Typo in skill name or skill doesn't exist.
+    
+    **Fix**:
+    ```python
+    # List all skills first
+    list_skills()
+    
+    # Then get exact name
+    get_skill("exact_skill_name")
+    ```
+  </Accordion>
+  
+  <Accordion title="No skills for my stack">
+    **Cause**: Stack not yet covered or using non-standard names.
+    
+    **Fix**:
+    ```python
+    # Try semantic search for patterns
+    semantic_search("your framework patterns")
+    
+    # Request skill via GitHub issue
+    # https://github.com/MidOSresearch/midos/issues/new
+    ```
+  </Accordion>
+  
+  <Accordion title="Skill code doesn't work">
+    **Cause**: Version mismatch or missing dependencies.
+    
+    **Fix**:
+    1. Check skill header for version requirements
+    2. Verify your versions: `pip list` or `npm list`
+    3. Install missing dependencies
+    4. Report issue if skill is outdated
+  </Accordion>
+  
+  <Accordion title="Stack filtering returns no results">
+    **Cause**: Using abbreviations or non-canonical names.
+    
+    **Fix**:
+    ```python
+    # Wrong
+    list_skills(stack="js,ts,pg")
+    
+    # Correct
+    list_skills(stack="javascript,typescript,postgresql")
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Search Strategies" icon="magnifying-glass" href="/guides/search-strategies">
+    Learn how to find skills using semantic search
+  </Card>
+  <Card title="Agent Handshake" icon="handshake" href="/guides/agent-handshake">
+    Get personalized skill recommendations
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/knowledge/get-skill">
+    Full API documentation for skill tools
+  </Card>
+  <Card title="Skill Packs Concept" icon="book" href="/concepts/skill-packs">
+    Understand the skill pipeline
+  </Card>
+</CardGroup>

@@ -1,0 +1,455 @@
+---
+title: 'Authentication'
+description: 'How to authenticate with the MidOS API and manage API keys'
+---
+
+## Authentication Overview
+
+MidOS uses a two-tier authentication model with optional API keys. No authentication is required for basic access — API keys are only needed for Pro tier features.
+
+## Access Tiers
+
+### Free Tier (Dev)
+
+**No API key required**
+
+The free tier provides full access to core MidOS features:
+
+- **Rate limit**: 100 queries per month
+- **Tools**: 19 community and dev tools
+- **Knowledge base**: Full access to 46,000+ curated chunks
+- **Search**: Keyword, semantic, and hybrid search
+- **Skills**: All 200+ skill packs
+- **EUREKA**: All 383 validated discoveries
+- **Truth patches**: All 50 empirically verified patches
+
+Free tier rate limits are tracked per IP address (hashed for privacy).
+
+### Pro Tier ($20/month)
+
+**Requires API key**
+
+Pro tier unlocks premium features and higher limits:
+
+- **Rate limit**: 25,000 queries per month
+- **All dev tier tools** plus:
+  - `get_aotc`: Ahead-of-the-curve frontier research (140 SOTA items)
+  - `episodic_search`: Search agent session history
+  - `episodic_store`: Store learnings for future sessions
+  - `where_was_i`: Recover last session context
+  - `create_plan`: Persistent execution plans
+  - `security_scan_target`: Automated security scanning
+  - `quality_gate`: Quality evaluation for knowledge items
+
+Get a Pro API key at [midos.dev/pricing](https://midos.dev/pricing).
+
+## API Key Format
+
+MidOS API keys follow this format:
+
+```
+midos_sk_<48-character-hex-string>
+```
+
+Example:
+```
+midos_sk_a1b2c3d4e5f67890abcdef1234567890abcdef1234567890
+```
+
+- **Prefix**: `midos_sk_` identifies the key type (secret key)
+- **Length**: 57 characters total (9 prefix + 48 hex)
+- **Encoding**: Hexadecimal (0-9, a-f)
+
+## Passing Your API Key
+
+API keys are passed via the `Authorization` header using Bearer authentication.
+
+### MCP Client Configuration
+
+Add your API key to your MCP client configuration:
+
+<CodeGroup>
+
+```json Claude Code (.mcp.json)
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer midos_sk_YOUR_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+```json Cursor/Windsurf
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "transportType": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer midos_sk_YOUR_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+```json Cline
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "transportType": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer midos_sk_YOUR_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+```json Claude Desktop (macOS)
+// ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer midos_sk_YOUR_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+```json Claude Desktop (Windows)
+// %APPDATA%\Claude\claude_desktop_config.json
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer midos_sk_YOUR_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+### Environment Variables (Self-Hosted)
+
+When running MidOS locally via stdio transport, set the tier via environment variable:
+
+```bash
+export MIDOS_STDIO_TIER=dev
+python -m modules.mcp_server.midos_mcp
+```
+
+<Warning>
+Environment variable authentication only works for stdio transport (local development). Remote HTTP connections require API keys for Pro tier access.
+</Warning>
+
+## Rate Limiting
+
+### How Rate Limits Work
+
+MidOS tracks query usage per calendar month:
+
+- **Free tier**: 100 queries/month (tracked by IP hash)
+- **Pro tier**: 25,000 queries/month (tracked by API key)
+- **Reset**: Automatically on the 1st of each month
+
+Rate limits apply to all tool calls. System health endpoints (`/health`, `/health/ready`) are not counted.
+
+### Rate Limit Headers
+
+Rate limit information is available in response metadata (implementation-specific to MCP client):
+
+| Identifier | Tier | Limit | Current Usage |
+|------------|------|-------|---------------|
+| `anon_a1b2c3d4...` | community | 100 | 47 |
+| `midos_sk_...` | dev | 25,000 | 1,234 |
+
+### When Rate Limit is Exceeded
+
+Tool calls that exceed your rate limit will fail with:
+
+```
+ToolError: Rate limit exceeded: 101/100 queries this month.
+Upgrade your tier at https://midos.dev/pricing
+```
+
+Your usage counter resets automatically on the first day of the next month.
+
+## API Key Validation
+
+### Valid Key Requirements
+
+- Must start with `midos_sk_`
+- Must be exactly 57 characters
+- Must be active (not revoked)
+- Must exist in the API keys database
+
+### Invalid Key Responses
+
+Invalid or revoked keys trigger immediate rejection:
+
+```
+ToolError: Invalid or revoked API key.
+Get a key at https://midos.dev/keys
+```
+
+Invalid key scenarios:
+- Malformed `Authorization` header (missing "Bearer")
+- Wrong prefix (not `midos_sk_`)
+- Key not found in database
+- Key marked as revoked
+- Key exceeds length limit (128 chars)
+
+### Key Security
+
+<Warning>
+Never commit API keys to version control. Store them securely in:
+- Environment variables
+- Secret management systems
+- MCP client configuration files (excluded from git)
+</Warning>
+
+API keys are stored server-side in `config/api_keys.json` with:
+
+```json
+{
+  "midos_sk_...": {
+    "name": "my-app",
+    "tier": "dev",
+    "created": "2026-03-05T10:30:00Z",
+    "active": true
+  }
+}
+```
+
+## Localhost Bypass
+
+When connecting from localhost (127.0.0.1, ::1), MidOS grants dev tier access without requiring an API key.
+
+This is designed for local development and testing.
+
+### Security Considerations
+
+The localhost bypass only activates when:
+
+1. **Direct connection**: Host header is `localhost`, `127.0.0.1`, or `::1`
+2. **Trusted proxy**: Request comes through Cloudflare with `CF-Connecting-IP` set to localhost
+
+<Warning>
+The `X-Forwarded-For` header is **only** trusted when the request originates from a known Cloudflare IP range. This prevents header spoofing attacks.
+</Warning>
+
+See `modules/mcp_server/auth.py:290-323` for the localhost detection implementation.
+
+## Tier Gating
+
+### How Tier Gating Works
+
+Each tool is assigned a minimum required tier:
+
+```python
+COMMUNITY_TOOLS = {
+    "search_knowledge", "list_skills", "hive_status",
+    "project_status", "agent_handshake", "get_skill",
+    "get_protocol", "agent_bootstrap"
+}
+
+DEV_TOOLS = {
+    "get_eureka", "get_truth", "semantic_search",
+    "research_youtube", "chunk_code", "memory_stats",
+    "pool_status", "episodic_search"
+}
+
+ADMIN_TOOLS = {
+    "episodic_store", "pool_signal"
+}
+```
+
+Tool calls below the required tier are rejected with:
+
+```
+ToolError: 'episodic_search' requires dev tier or higher.
+Current tier: community.
+Community tools: agent_bootstrap, agent_handshake, get_protocol, ...
+Upgrade at https://midos.dev/pricing
+```
+
+### Tier Hierarchy
+
+```
+community (0) → dev (1) → ops (2) → admin (99)
+```
+
+- Users with higher tiers can access all lower-tier tools
+- `ops` tier exists for future expansion (currently same as `dev`)
+- `admin` tier is for internal tools only
+
+See `modules/mcp_server/auth.py:377-414` for the tier gating implementation.
+
+## Managing API Keys
+
+### Generate a New Key
+
+Keys are generated server-side using the management CLI:
+
+```bash
+python -m modules.mcp_server.auth generate \
+  --name "my-app" \
+  --tier dev
+```
+
+Output:
+```
+Generated dev key for 'my-app':
+  midos_sk_a1b2c3d4e5f67890abcdef1234567890abcdef1234567890
+  Store this securely — it won't be shown again in full.
+```
+
+### List All Keys
+
+```bash
+python -m modules.mcp_server.auth list
+```
+
+Output:
+```
+Prefix                 Name                 Tier     Active   Created
+--------------------------------------------------------------------------------
+midos_sk_a1b2c3...     my-app               dev      yes      2026-03-05
+midos_sk_b2c3d4...     prod-agent           ops      yes      2026-03-01
+```
+
+### Revoke a Key
+
+```bash
+python -m modules.mcp_server.auth revoke \
+  --key midos_sk_a1b2c3d4e5f67890abcdef1234567890abcdef1234567890
+```
+
+Output:
+```
+Key revoked: midos_sk_a1b2c3...
+```
+
+Revoked keys:
+- Are marked `active: false` in the database
+- Cannot be used for authentication
+- Fail with "Invalid or revoked API key" error
+
+### View Usage Statistics
+
+```bash
+python -m modules.mcp_server.auth usage
+```
+
+Output:
+```
+Usage for 2026-03:
+Identifier             Queries
+-----------------------------------
+midos_sk_a1b2c3...     1,234
+anon_x9y8z7...         47
+```
+
+## Troubleshooting
+
+### "Invalid or revoked API key"
+
+**Cause**: Key is malformed, doesn't exist, or has been revoked.
+
+**Solution**:
+1. Verify key format: `midos_sk_` prefix + 48 hex characters
+2. Check for typos or truncation
+3. Confirm key is active: `python -m modules.mcp_server.auth list`
+4. Generate a new key if needed
+
+### "Rate limit exceeded"
+
+**Cause**: You've reached your monthly query limit.
+
+**Solution**:
+1. Wait until next month (limits reset on the 1st)
+2. Upgrade to Pro tier for 25,000 queries/month
+3. Check current usage: `python -m modules.mcp_server.auth usage`
+
+### Tool requires higher tier
+
+**Cause**: Attempting to use a Pro tool with free tier access.
+
+**Solution**:
+1. Verify which tools are free: See [API Introduction](/api/introduction)
+2. Get a Pro API key at [midos.dev/pricing](https://midos.dev/pricing)
+3. Add key to MCP client configuration
+
+### Authorization header not recognized
+
+**Cause**: Header is malformed or missing "Bearer" prefix.
+
+**Solution**:
+```json
+// Correct format
+"Authorization": "Bearer midos_sk_..."
+
+// Incorrect formats (will fail)
+"Authorization": "midos_sk_..."           // Missing "Bearer"
+"Authorization": "Token midos_sk_..."     // Wrong prefix
+"authorization": "bearer midos_sk_..."    // Case-sensitive
+```
+
+### Localhost bypass not working
+
+**Cause**: Request is not actually from localhost, or proxy headers are spoofed.
+
+**Solution**:
+1. Verify you're connecting to `http://localhost:8419/mcp`
+2. Check that `Host` header is `localhost`, not an IP address
+3. If behind a proxy, ensure `CF-Connecting-IP` is set correctly
+4. Use API key authentication instead for remote connections
+
+## Best Practices
+
+1. **Rotate keys regularly**: Generate new keys every 90 days
+2. **Use descriptive names**: Name keys after the app/agent using them
+3. **Monitor usage**: Check usage stats before month-end
+4. **Revoke unused keys**: Keep only active keys in the database
+5. **Secure storage**: Never commit keys to git or share in public
+6. **Use environment variables**: For local development, use env vars or MCP config
+7. **Test with free tier first**: Validate your integration before upgrading
+
+## Rate Limit Strategy
+
+To maximize your free tier allocation:
+
+1. **Cache results**: Store responses locally when appropriate
+2. **Batch queries**: Combine multiple searches into one
+3. **Use filters**: Add `stack` parameter to narrow results
+4. **Prefer specific tools**: Use `get_skill` instead of searching when you know the name
+5. **Handshake once**: Call `agent_handshake` once per session, not per query
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Introduction" icon="book-open" href="/api/introduction">
+    Overview of all available tools and categories
+  </Card>
+  <Card title="Search Tools" icon="magnifying-glass" href="/api/search/search-knowledge">
+    Start querying the knowledge base
+  </Card>
+  <Card title="Agent Handshake" icon="handshake" href="/api/agent/agent-handshake">
+    Personalize your agent setup
+  </Card>
+  <Card title="Self-Hosting" icon="server" href="/guides/self-hosting">
+    Run MidOS on your own infrastructure
+  </Card>
+</CardGroup>

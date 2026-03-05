@@ -1,0 +1,450 @@
+---
+title: "Connecting to MCP"
+description: "Step-by-step setup guide for connecting MidOS to your AI coding environment"
+---
+
+MidOS connects to AI coding tools via the Model Context Protocol (MCP). This guide shows you how to configure each supported client.
+
+## Prerequisites
+
+Before connecting, make sure you have:
+- An MCP-compatible AI coding tool installed
+- Internet connection (for cloud-hosted MidOS)
+- Or Python 3.11+ (for self-hosted)
+
+## Cloud Setup (Recommended)
+
+The fastest way to connect is using the hosted MidOS server at `https://mcp.midos.dev/mcp`.
+
+### Claude Code
+
+<Steps>
+  <Step title="Locate your MCP configuration">
+    Claude Code reads MCP settings from:
+    - **Project-level**: `.mcp.json` in your project root
+    - **Global**: `~/.claude/settings.json` (macOS/Linux) or `%USERPROFILE%\.claude\settings.json` (Windows)
+
+    <Tip>Use project-level config to share MidOS setup with your team via Git.</Tip>
+  </Step>
+
+  <Step title="Add MidOS to your config">
+    Open or create `.mcp.json` in your project directory:
+
+    ```json .mcp.json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp"
+        }
+      }
+    }
+    ```
+
+    <Note>Claude Code auto-detects HTTP transport. No `transportType` needed.</Note>
+  </Step>
+
+  <Step title="Restart Claude Code">
+    Quit and reopen Claude Code to load the new configuration.
+  </Step>
+
+  <Step title="Verify connection">
+    In a new chat, type:
+    ```bash
+    hive_status()
+    ```
+
+    You should see MidOS system stats including chunk counts and vector store status.
+  </Step>
+</Steps>
+
+### Cursor
+
+<Steps>
+  <Step title="Open MCP Settings">
+    1. Open Cursor Settings (⌘+, on Mac, Ctrl+, on Windows/Linux)
+    2. Search for "MCP" or navigate to **Features → Model Context Protocol**
+    3. Click **Add New Server**
+  </Step>
+
+  <Step title="Configure MidOS server">
+    Fill in the server details:
+    - **Name**: `midos`
+    - **URL**: `https://mcp.midos.dev/mcp`
+    - **Transport**: `Streamable HTTP`
+
+    Click **Save**.
+  </Step>
+
+  <Step title="Test the connection">
+    Open Composer (⌘+K or Ctrl+K) and ask:
+    ```
+    Use the midos server to search for React patterns
+    ```
+  </Step>
+</Steps>
+
+### Windsurf
+
+<Steps>
+  <Step title="Access MCP Settings">
+    1. Open Windsurf Settings
+    2. Navigate to **MCP Servers**
+    3. Click **Add Server**
+  </Step>
+
+  <Step title="Add MidOS server">
+    Configure:
+    - **Name**: `midos`
+    - **URL**: `https://mcp.midos.dev/mcp`
+    - **Transport**: `Streamable HTTP`
+  </Step>
+
+  <Step title="Verify in Cascade">
+    Open Cascade and call:
+    ```bash
+    list_skills(stack="react")
+    ```
+  </Step>
+</Steps>
+
+### Cline
+
+<Steps>
+  <Step title="Open MCP settings file">
+    Cline stores MCP configuration in:
+    - **macOS**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+    - **Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+    - **Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+  </Step>
+
+  <Step title="Add MidOS configuration">
+    Edit the JSON file:
+
+    ```json cline_mcp_settings.json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp",
+          "transportType": "streamable-http"
+        }
+      }
+    }
+    ```
+
+    <Warning>Cline requires explicit `transportType` for HTTP servers.</Warning>
+  </Step>
+
+  <Step title="Reload VS Code">
+    Restart VS Code to apply the new MCP configuration.
+  </Step>
+</Steps>
+
+### Claude Desktop
+
+<Steps>
+  <Step title="Find config file">
+    Claude Desktop uses:
+    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+    - **Linux**: `~/.config/Claude/claude_desktop_config.json`
+  </Step>
+
+  <Step title="Edit configuration">
+    Add MidOS to the config:
+
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp"
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Restart Claude Desktop">
+    Close and reopen the app.
+  </Step>
+
+  <Step title="Verify tools available">
+    Type:
+    ```
+    What MCP tools are available?
+    ```
+
+    You should see MidOS tools including `search_knowledge`, `semantic_search`, and `agent_handshake`.
+  </Step>
+</Steps>
+
+## Self-Hosted Setup
+
+For production deployments or offline use, run MidOS locally.
+
+### Local HTTP Server
+
+<Steps>
+  <Step title="Clone and install">
+    ```bash
+    git clone https://github.com/MidOSresearch/midos.git
+    cd midos
+    pip install -e .
+    pip install -e hive_commons/
+    ```
+  </Step>
+
+  <Step title="Configure environment">
+    Copy `.env.example` to `.env` and set required keys:
+
+    ```bash .env
+    GEMINI_API_KEY=your_gemini_key_here
+    GOOGLE_API_KEY=your_google_key_here
+    ```
+
+    <Tip>Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com/app/apikey)</Tip>
+  </Step>
+
+  <Step title="Run the server">
+    Start in HTTP mode:
+
+    ```bash
+    python -m modules.mcp_server.midos_mcp --http --port 8419
+    ```
+
+    The server starts at `http://localhost:8419/mcp`.
+  </Step>
+
+  <Step title="Point your client to localhost">
+    Update your MCP config to use the local URL:
+
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "http://localhost:8419/mcp"
+        }
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Docker Deployment
+
+<Steps>
+  <Step title="Build the image">
+    ```bash
+    docker build -t midos-mcp .
+    ```
+  </Step>
+
+  <Step title="Run the container">
+    ```bash
+    docker run -d \
+      -p 8419:8419 \
+      -e GEMINI_API_KEY=your_key \
+      --name midos \
+      midos-mcp
+    ```
+  </Step>
+
+  <Step title="Check health">
+    Verify the server is running:
+
+    ```bash
+    curl http://localhost:8419/health
+    ```
+
+    Expected response:
+    ```json
+    {
+      "status": "ok",
+      "server": "midos",
+      "uptime_seconds": 42.3
+    }
+    ```
+  </Step>
+</Steps>
+
+### stdio Transport (Advanced)
+
+For Claude Desktop or programmatic use:
+
+<Steps>
+  <Step title="Configure stdio in MCP client">
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "midos": {
+          "command": "python",
+          "args": ["-m", "modules.mcp_server.midos_mcp"],
+          "cwd": "/path/to/midos"
+        }
+      }
+    }
+    ```
+
+    <Warning>Replace `/path/to/midos` with your actual MidOS installation path.</Warning>
+  </Step>
+
+  <Step title="Restart client">
+    Restart your MCP client to spawn the stdio process.
+  </Step>
+</Steps>
+
+## Testing Your Connection
+
+Once connected, verify MidOS is working:
+
+### Quick Health Check
+
+```bash
+hive_status()
+```
+
+**Expected output:**
+```json
+{
+  "timestamp": "2026-03-05T12:34:56",
+  "knowledge_files": 46234,
+  "skills_count": 203,
+  "protocols_count": 15
+}
+```
+
+### Run Agent Handshake
+
+```bash
+agent_handshake(
+  model="claude-opus-4-6",
+  client="claude-code",
+  languages="python,typescript",
+  frameworks="fastapi,react"
+)
+```
+
+You should receive a personalized config with recommended tools and skills.
+
+### Search Test
+
+```bash
+semantic_search("React Server Components")
+```
+
+Should return relevant chunks from the knowledge base.
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Connection timeout">
+    **Symptoms**: MCP client reports connection timeout.
+
+    **Solutions**:
+    1. Verify the URL is correct: `https://mcp.midos.dev/mcp` (no trailing slash)
+    2. Check your firewall allows outbound HTTPS
+    3. Try the health endpoint directly: `curl https://mcp.midos.dev/health`
+    4. For self-hosted: ensure the server is running on the correct port
+  </Accordion>
+
+  <Accordion title="Tools not appearing">
+    **Symptoms**: MidOS server connects but no tools are listed.
+
+    **Solutions**:
+    1. Restart your MCP client completely (not just reload)
+    2. Check MCP client logs for errors
+    3. Verify transport type matches (HTTP clients need `streamable-http` or auto-detect)
+    4. For stdio: check the `cwd` path is correct
+  </Accordion>
+
+  <Accordion title="Authentication errors">
+    **Symptoms**: 401 Unauthorized or 403 Forbidden errors.
+
+    **Solutions**:
+    1. For cloud: no API key is required for Dev tier (free)
+    2. For Pro tier: verify your API key is in the `Authorization` header:
+       ```json
+       {
+         "headers": {
+           "Authorization": "Bearer midos_sk_your_key_here"
+         }
+       }
+       ```
+    3. For self-hosted: ensure `.env` has valid `GEMINI_API_KEY`
+  </Accordion>
+
+  <Accordion title="Self-hosted: Import errors">
+    **Symptoms**: `ModuleNotFoundError` when starting server.
+
+    **Solutions**:
+    ```bash
+    pip install -e .                # Install main package
+    pip install -e hive_commons/    # Install hive_commons
+    pip install fastmcp lancedb      # Ensure dependencies
+    ```
+  </Accordion>
+
+  <Accordion title="Windows: Command chaining fails">
+    **Symptoms**: Commands like `cd dir && python script.py` fail.
+
+    **Solutions**:
+    Windows PowerShell doesn't support `&&`. Use `;` instead:
+    ```powershell
+    cd midos ; python -m modules.mcp_server.midos_mcp --http
+    ```
+
+    Or use separate commands:
+    ```powershell
+    cd midos
+    python -m modules.mcp_server.midos_mcp --http
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Using an API Key (Pro Tier)
+
+For Pro tier features (security_scan_target, get_aotc, episodic_search):
+
+<Steps>
+  <Step title="Get your API key">
+    Sign up at [midos.dev/pricing](https://midos.dev/pricing) and copy your key.
+  </Step>
+
+  <Step title="Add to MCP config">
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp",
+          "headers": {
+            "Authorization": "Bearer midos_sk_your_key_here"
+          }
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Verify Pro access">
+    Test a Pro-only tool:
+    ```bash
+    get_aotc("mcp-streaming")
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Handshake" icon="handshake" href="/guides/agent-handshake">
+    Personalize MidOS for your model and stack
+  </Card>
+  <Card title="Search Strategies" icon="magnifying-glass" href="/guides/search-strategies">
+    Learn when to use keyword vs semantic search
+  </Card>
+  <Card title="Using Skills" icon="graduation-cap" href="/guides/using-skills">
+    Browse and apply production-tested skill packs
+  </Card>
+  <Card title="Self-Hosting" icon="server" href="/guides/self-hosting">
+    Deploy MidOS in production
+  </Card>
+</CardGroup>

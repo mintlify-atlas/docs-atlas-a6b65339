@@ -1,0 +1,340 @@
+---
+title: 'semantic_search'
+description: 'Intelligent vector search using Gemini embeddings over 670K+ vectors'
+icon: 'brain'
+---
+
+## Overview
+
+Semantic search uses LanceDB vector embeddings powered by Google Gemini (`gemini-embedding-001`, 3072 dimensions) to find conceptually relevant content, not just keyword matches.
+
+**When to use**: Natural language queries, conceptual searches, when exact keywords are unknown, or when you need synonym-aware search.
+
+## Function Signature
+
+```python
+async def semantic_search(query: str, top_k: int = 5, stack: str = "") -> str
+```
+
+## Parameters
+
+<ParamField path="query" type="string" required>
+  Natural language query describing what you're looking for. Automatically expanded for better matching.
+  
+  **Examples**: 
+  - "how to implement RAG pipelines"
+  - "best practices for React state management"
+  - "authentication patterns in FastAPI"
+</ParamField>
+
+<ParamField path="top_k" type="integer" default="5">
+  Number of results to return. Internally fetches `top_k * 2` when using stack filtering for better relevance.
+  
+  **Range**: 1-20 recommended (higher values increase API latency)
+</ParamField>
+
+<ParamField path="stack" type="string" default="">
+  Comma-separated technology stack filter. Results mentioning these technologies are boosted in ranking.
+  
+  **Format**: `"python,fastapi"` or `"react,typescript,nextjs"`
+  
+  **Effect**: Retrieves 2x results, then re-ranks based on stack token matches
+</ParamField>
+
+## Return Format
+
+Returns formatted markdown string with semantic matches:
+
+```markdown
+Found 5 semantic matches for 'event sourcing CQRS':
+
+### 1. Score: 0.847
+Source: knowledge/skills/RAG_SYSTEMS_2026_SOTA.md
+```
+CQRS pattern separates read and write models, enabling better scalability...
+```
+
+### 2. Score: 0.792
+Source: knowledge/EUREKA/EUREKA_HYBRID_SEARCH.md
+```
+Event sourcing stores state changes as a sequence of events...
+```
+```
+
+If no matches:
+```
+No semantic matches for: {query}
+```
+
+## Usage Examples
+
+<CodeGroup>
+
+```python Basic Semantic Search
+# Natural language query
+result = await semantic_search(
+    "how to chunk documents for better RAG retrieval"
+)
+
+# Returns conceptually relevant content even without exact keyword match
+# Score: 0.891 - knowledge/chunks/chunking_strategies_2026.md
+# Score: 0.856 - knowledge/EUREKA/EUREKA_AST_CHUNKING.md
+```
+
+```python Stack-Aware Search
+# Filter results for Python + FastAPI stack
+result = await semantic_search(
+    query="implement rate limiting",
+    top_k=5,
+    stack="python,fastapi"
+)
+
+# Results mentioning FastAPI are ranked higher
+# Even if vector similarity is slightly lower
+```
+
+```python Increased Results
+# Get top 15 matches for broad research
+result = await semantic_search(
+    query="deployment strategies for microservices",
+    top_k=15
+)
+```
+
+</CodeGroup>
+
+## Query Expansion
+
+Short queries (less than 60 chars) are automatically enriched with domain synonyms:
+
+```python
+# Input: "caching"
+# Expanded: "caching response cache semantic cache performance"
+
+# Input: "testing"
+# Expanded: "testing unit test integration test e2e playwright vitest"
+
+# Input: "docker"
+# Expanded: "Docker container image compose kubernetes deployment"
+```
+
+**Supported expansions**: caching, testing, deployment, security, performance, migration, API, database, auth, Docker, React, TypeScript, Astro, FastAPI, MCP, RAG, chunking, monitoring.
+
+## Stack Filtering Logic
+
+### How It Works
+
+1. Fetch `top_k * 2` initial results (e.g., 10 for `top_k=5`)
+2. Score each result by stack token matches:
+   - +1 point: Stack token appears in source path or text
+   - Sort by boost score (descending)
+3. Return top `top_k` boosted results
+
+### Example
+
+```python
+result = await semantic_search(
+    query="caching strategies",
+    top_k=3,
+    stack="python,fastapi"
+)
+
+# Fetches 6 results, re-ranks:
+# 1. Score: 0.82, Source: .../fastapi_caching_patterns.md (boost: 2)
+# 2. Score: 0.89, Source: .../redis_cache_basics.md (boost: 1) 
+# 3. Score: 0.91, Source: .../cache_theory.md (boost: 0)
+#
+# Even though #3 has highest semantic score,
+# stack boost prioritizes FastAPI-specific content
+```
+
+## Performance
+
+### Latency
+
+- **First call**: ~800-1200ms (Gemini API embedding)
+- **Cached query**: less than 50ms (embedding cache hit)
+- **Cache TTL**: 5 minutes
+- **LanceDB vector search**: ~20-50ms
+
+### Query Embedding Cache
+
+- **LRU cache**: 100 most recent queries
+- **Key**: Expanded query text
+- **Savings**: 1-2 seconds per cache hit
+
+### Rate Limits
+
+- **Gemini API**: Subject to Google API quotas
+- **Failure handling**: Automatic retry once (1s delay)
+- **Fallback**: Returns empty results if embedding fails
+
+## Search Modes Comparison
+
+<CardGroup cols={2}>
+
+<Card title="Semantic Search" icon="brain">
+  **Strengths**:
+  - Understands concepts
+  - Handles synonyms
+  - Natural language
+  
+  **Weaknesses**:
+  - Slower (API call)
+  - May miss exact terms
+  - Requires embeddings
+</Card>
+
+<Card title="Keyword Search" icon="search">
+  **Strengths**:
+  - Exact matches
+  - Fast (less than 100ms)
+  - No API dependency
+  
+  **Weaknesses**:
+  - Literal only
+  - Misses synonyms
+  - Order-agnostic
+</Card>
+
+</CardGroup>
+
+## Real-World Examples
+
+<Tabs>
+  <Tab title="Conceptual Search">
+    ```python
+    # Agent doesn't know exact terminology
+    result = await semantic_search(
+        "how do I prevent my app from crashing when external API fails"
+    )
+    
+    # Finds:
+    # - Circuit breaker patterns
+    # - Retry strategies
+    # - Graceful degradation
+    # 
+    # ...without needing exact keywords
+    ```
+  </Tab>
+  
+  <Tab title="Stack-Specific Research">
+    ```python
+    # Research React patterns, ignore other frameworks
+    result = await semantic_search(
+        query="component composition and prop drilling alternatives",
+        top_k=10,
+        stack="react,typescript"
+    )
+    
+    # Prioritizes React-specific content
+    # Context API, Zustand, Jotai patterns
+    ```
+  </Tab>
+  
+  <Tab title="Synonym-Aware Discovery">
+    ```python
+    # These all find similar results:
+    await semantic_search("authentication")
+    await semantic_search("user login")
+    await semantic_search("identity verification")
+    await semantic_search("access control")
+    
+    # Semantic embeddings understand these are related
+    ```
+  </Tab>
+</Tabs>
+
+## Error Handling
+
+<CodeGroup>
+
+```python Missing hive_commons
+# If hive_commons package not installed
+result = await semantic_search("query")
+
+# Raises:
+# ToolError: "hive_commons not available. Install with: pip install -e ./hive_commons"
+```
+
+```python Embedding Failure
+# If Gemini API fails (no key, quota, network)
+result = await semantic_search("query")
+
+# Returns:
+# "No semantic matches for: query"
+# 
+# (Logged as error, but doesn't raise exception)
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Write natural language queries">
+    **Good**: "how to implement pagination in REST APIs"
+    
+    **Bad**: "pagination REST" (too terse, use search_knowledge instead)
+    
+    Semantic search shines with full sentences.
+  </Accordion>
+  
+  <Accordion title="Use stack filter proactively">
+    ```python
+    # Agent knows it's working on FastAPI project
+    # Always include stack filter for relevant results
+    result = await semantic_search(
+        query=user_question,
+        stack="python,fastapi,pydantic"
+    )
+    ```
+    
+    Reduces noise from other frameworks (e.g., Django, Flask).
+  </Accordion>
+  
+  <Accordion title="Adjust top_k based on task">
+    - **Precision task**: `top_k=3` (get best matches only)
+    - **Research**: `top_k=10-15` (explore breadth)
+    - **Quick check**: `top_k=1` (single best answer)
+  </Accordion>
+  
+  <Accordion title="Combine with keyword for best recall">
+    ```python
+    # 1. Try semantic first (higher quality)
+    results = await semantic_search("React suspense error boundaries")
+    
+    # 2. Augment with keyword if needed (catch exact terms)
+    keyword_results = await search_knowledge("ErrorBoundary")
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Architecture Details
+
+### Embedding Model
+
+- **Model**: `gemini-embedding-001`
+- **Dimensions**: 3072
+- **Provider**: Google Gemini API
+- **Quality**: State-of-the-art (2024-2026)
+
+### Vector Store
+
+- **Engine**: LanceDB
+- **Index**: Vector + FTS (hybrid-ready)
+- **Size**: 670K+ vectors
+- **Storage**: Disk-based (persistent)
+
+### Caching Layers
+
+1. **Query embedding cache**: LRU, 5min TTL, 100 entries
+2. **Chunk embedding cache**: In-memory, session-scoped
+3. **LanceDB internal cache**: OS page cache
+
+## Related Tools
+
+- [`search_knowledge`](/api/search/search-knowledge) - Fast keyword search
+- [`hybrid_search`](/api/search/hybrid-search) - Combines semantic + keyword with RRF
+- [`smart_search`](/api/search/smart-search) - Auto-detects optimal search mode
+- [`list_skills`](/api/knowledge/list-skills) - Stack-filtered skill browsing

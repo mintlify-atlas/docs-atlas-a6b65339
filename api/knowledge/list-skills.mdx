@@ -1,0 +1,188 @@
+---
+title: 'list_skills'
+description: 'List all available skills with optional filtering and stack prioritization'
+icon: 'list'
+---
+
+## Overview
+
+The `list_skills` tool lists all available skills/capabilities in the MidOS knowledge base. It supports filtering by name and intelligent stack-based prioritization using compatibility metadata.
+
+## Function Signature
+
+```python
+async def list_skills(filter: str = "", stack: str = "") -> str
+```
+
+## Parameters
+
+<ParamField path="filter" type="string" default="">
+  Optional text filter for skill names. Case-insensitive substring matching.
+  
+  Examples:
+  - `"react"` - Shows react, react_patterns_hooks
+  - `"api"` - Shows fastapi, graphql_api_design, anime_image_generation_apis
+  - `"database"` - Shows skills with "database" in name
+</ParamField>
+
+<ParamField path="stack" type="string" default="">
+  Optional comma-separated list of technologies for intelligent prioritization.
+  Skills matching the stack are ranked higher based on:
+  - Compatibility metadata (languages, frameworks)
+  - Name matching
+  
+  Examples:
+  - `"python,react"` - Prioritizes Python and React skills
+  - `"typescript,nestjs"` - Prioritizes TypeScript/NestJS patterns
+  - `"go,kubernetes"` - Prioritizes Go and Kubernetes skills
+</ParamField>
+
+## Return Value
+
+Returns a formatted string with:
+- Total count of matching skills
+- List of skill names (one per line)
+- Skills ordered by relevance when stack filter is used
+
+```
+Available skills (45):
+
+- react
+- react_patterns_hooks
+- fastapi
+- docker-containerization
+...
+```
+
+## Stack Prioritization
+
+When `stack` parameter is provided, skills are scored and sorted by:
+
+1. **Compatibility Match** (+2 points): Checks `compatibility.json` for:
+   - `languages[]` array
+   - `frameworks[]` array
+   
+2. **Name Match** (+1 point): Stack token appears in skill name
+
+### Scoring Example
+
+For `stack="python,react"`:
+
+```
+Skill: fastapi
+- Has compatibility.json with languages: ["python"]
+- Name contains "api" (no direct match)
+- Score: 2
+
+Skill: react_patterns_hooks
+- Has compatibility.json with frameworks: ["react"]
+- Name contains "react"
+- Score: 3 (higher priority)
+
+Skill: django_v5
+- Has compatibility.json with languages: ["python"]
+- Name doesn't match
+- Score: 2
+```
+
+## Usage Examples
+
+### List All Skills
+
+```python
+result = await list_skills()
+# Returns: "Available skills (85):\n\n- react\n- angular\n..."
+```
+
+### Filter by Name
+
+```python
+result = await list_skills(filter="react")
+# Returns skills with "react" in name:
+# - react
+# - react_patterns_hooks
+```
+
+### Stack-Aware Listing
+
+```python
+result = await list_skills(stack="python,fastapi")
+# Prioritizes:
+# - fastapi (exact match)
+# - django_v5 (python match)
+# - Other Python-related skills
+# - All remaining skills
+```
+
+### Combined Filter + Stack
+
+```python
+result = await list_skills(filter="api", stack="python")
+# Shows only skills with "api" in name,
+# prioritized by Python relevance:
+# - fastapi (Python + name match)
+# - graphql_api_design
+# - anime_image_generation_apis
+```
+
+### Multi-Technology Stack
+
+```python
+result = await list_skills(stack="typescript,react,postgresql")
+# Prioritizes skills matching multiple technologies:
+# - Skills with React + TypeScript compatibility
+# - Skills with PostgreSQL compatibility
+# - Skills matching any single technology
+# - All other skills
+```
+
+## Common Use Cases
+
+### Frontend Development
+
+```python
+await list_skills(stack="react,typescript")
+await list_skills(stack="vue,javascript")
+await list_skills(stack="angular,rxjs")
+```
+
+### Backend Development
+
+```python
+await list_skills(stack="python,fastapi,postgresql")
+await list_skills(stack="nodejs,nestjs,mongodb")
+await list_skills(stack="go,grpc")
+```
+
+### Full Stack Projects
+
+```python
+await list_skills(stack="react,typescript,nestjs,postgresql")
+await list_skills(stack="nextjs,trpc,prisma")
+```
+
+## Compatibility Metadata
+
+Skills can include a `compatibility.json` file:
+
+```json
+{
+  "languages": ["python", "javascript"],
+  "frameworks": ["fastapi", "pydantic"],
+  "tools": ["docker", "pytest"]
+}
+```
+
+This metadata enables intelligent stack-aware recommendations.
+
+## Related Tools
+
+- [`get_skill`](/api/knowledge/get-skill) - Retrieve a specific skill document
+- [`semantic_search`](/api/search/semantic-search) - Semantic search with stack filtering
+- [`search_knowledge`](/api/search/search-knowledge) - Full-text search across knowledge base
+
+## Source Location
+
+Skills directory: `knowledge/skills/`
+
+Source: `modules/mcp_server/midos_mcp.py:262-310`

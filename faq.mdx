@@ -1,0 +1,260 @@
+---
+title: FAQ
+description: Frequently asked questions about MidOS
+---
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is MidOS?">
+    MidOS is an MCP (Model Context Protocol) server that provides curated, validated knowledge for AI coding agents. Unlike raw documentation dumps, every piece of knowledge is human-reviewed, cross-validated, and myth-busted with empirical evidence.
+
+    We offer 200+ skill packs, 46,000+ curated chunks, and 383 validated discoveries across 20+ technology stacks.
+  </Accordion>
+
+  <Accordion title="How is MidOS different from Context7 or raw docs?">
+    | | Raw Docs (Context7, etc.) | MidOS |
+    |---|---|---|
+    | **Content** | Documentation dumps | Curated, human-reviewed, cross-validated |
+    | **Quality** | No validation | 5-layer pipeline: chunks → truth → EUREKA → SOTA |
+    | **Search** | Keyword matching | Semantic + hybrid search (Gemini embeddings, 3072-d) |
+    | **Onboarding** | Generic | Personalized per model + CLI + stack |
+    | **Format** | Raw text | Stack-specific skill packs with production patterns |
+    | **Accuracy** | Stale docs | Myth-busted with empirical evidence |
+
+    **Example:**
+    ```
+    Your agent asks: "How do I implement optimistic updates in React 19?"
+    MidOS returns: Battle-tested pattern with useOptimistic + Server Actions, validated Feb 2026.
+    Context7 returns: Raw React docs from reactjs.org.
+    ```
+  </Accordion>
+
+  <Accordion title="Is MidOS free to use?">
+    Yes! MidOS offers a **Dev Tier** that's completely free with no API key required.
+
+    **Dev Tier (Free)** includes:
+    - All search tools (search_knowledge, smart_search, hybrid_search, semantic_search)
+    - Access to 46,000+ curated chunks
+    - 200+ skill packs
+    - 383 EUREKA discoveries
+    - 50 truth patches
+    - Protocol and pattern documentation
+
+    **Pro Tier ($20/mo)** adds:
+    - AOTC (Ahead-of-the-curve) frontier research
+    - Security scanning and penetration testing
+    - Episodic search (session history)
+    - Persistent planning (create_plan, where_was_i)
+    - Quality gate evaluation
+  </Accordion>
+</AccordionGroup>
+
+## Setup & Integration
+
+<AccordionGroup>
+  <Accordion title="Which AI coding tools support MidOS?">
+    MidOS supports all MCP-compatible tools:
+
+    - **Claude Code** (Claude AI's official coding environment)
+    - **Cursor** (AI-first code editor)
+    - **Windsurf** (AI coding assistant)
+    - **Cline** (VS Code extension for Claude)
+    - **Claude Desktop** (standalone app)
+    - Any other tool supporting MCP streamable-http transport
+
+    See our [Quick Start](/quickstart) guide for configuration instructions.
+  </Accordion>
+
+  <Accordion title="How do I get an API key?">
+    For **Dev Tier** (free), you don't need an API key. Just add MidOS to your MCP config and start using it.
+
+    For **Pro Tier** features:
+    1. Visit [midos.dev/pricing](https://midos.dev/pricing)
+    2. Subscribe to Pro ($20/mo)
+    3. Get your API key (format: `midos_your_key_here`)
+    4. Add it to your MCP config:
+
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp",
+          "headers": {
+            "Authorization": "Bearer midos_your_key_here"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Can I self-host MidOS?">
+    Yes! MidOS is open source (MIT license) and fully self-hostable:
+
+    ```bash
+    git clone https://github.com/MidOSresearch/midos.git
+    cd midos
+    pip install -e .
+    pip install -e hive_commons/
+    python -m modules.mcp_server.midos_mcp --http --port 8419
+    ```
+
+    Then point your MCP client to `http://localhost:8419/mcp`.
+
+    **Note:** Self-hosted instances use local knowledge files. For Pro features and the full knowledge base, use the hosted version at `https://mcp.midos.dev/mcp`.
+  </Accordion>
+</AccordionGroup>
+
+## Knowledge & Quality
+
+<AccordionGroup>
+  <Accordion title="How is knowledge validated?">
+    Every piece of knowledge flows through our 5-layer pipeline:
+
+    ```
+    staging/ → chunks/ → skills/ → truth/ → EUREKA/ → SOTA/
+     (entry)    (L1)      (L2)      (L3)     (L4)      (L5)
+    ```
+
+    - **Chunks (L1)**: Curated and indexed (46,000+ items)
+    - **Skills (L2)**: Organized into stack-specific packs (200+ items)
+    - **Truth (L3)**: Empirically verified with evidence (50 items)
+    - **EUREKA (L4)**: Validated improvements with measured ROI (383 items)
+    - **SOTA (L5)**: Best-in-class, currently unimprovable (140 items)
+
+    Each layer requires:
+    - Human review
+    - Cross-validation against multiple sources
+    - Empirical testing where applicable
+    - Myth-busting of popular but incorrect claims
+  </Accordion>
+
+  <Accordion title="What's the difference between EUREKA and SOTA?">
+    **EUREKA (L4)**: Validated breakthrough discoveries that show measurable improvements. These are patterns or techniques that work better than conventional approaches, with documented ROI.
+
+    Example: A caching strategy that reduces API calls by 80% in production.
+
+    **SOTA (L5)**: State-of-the-art patterns that represent the current best practice. These are "currently unimprovable" — the best known solution until something better comes along.
+
+    Example: The most performant way to implement server-side streaming in Next.js 16.
+
+    EUREKA items can graduate to SOTA after extensive validation and broad adoption.
+  </Accordion>
+
+  <Accordion title="How often is knowledge updated?">
+    We update continuously based on:
+    - Framework releases and API changes
+    - Community contributions
+    - Validated discoveries from production use
+    - Myth-busting of outdated practices
+
+    Check our [Changelog](/changelog) for recent updates and the [GitHub repository](https://github.com/MidOSresearch/midos) for real-time changes.
+  </Accordion>
+
+  <Accordion title="Can I contribute my own knowledge?">
+    Absolutely! MidOS is community-first. See our [Contributing](/contributing) guide to:
+
+    1. Search existing knowledge first
+    2. Open an issue with your pattern or discovery
+    3. Submit empirical evidence or production experience
+    4. Get reviewed and added to the pipeline
+
+    We especially value:
+    - Production-tested patterns
+    - Myth-busting with empirical data
+    - Performance improvements with benchmarks
+    - Edge cases not covered in official docs
+  </Accordion>
+</AccordionGroup>
+
+## Technical Questions
+
+<AccordionGroup>
+  <Accordion title="How does semantic search work?">
+    MidOS uses:
+    - **670,000+ vectors** generated from curated knowledge
+    - **Gemini embeddings** (3072 dimensions)
+    - **LanceDB** vector database for fast retrieval
+    - **Hybrid search** combining keyword + semantic + reranking
+
+    When you call `semantic_search("event sourcing CQRS")`, MidOS:
+    1. Generates embeddings for your query
+    2. Finds similar vectors in LanceDB
+    3. Ranks results by relevance
+    4. Returns curated, validated knowledge chunks
+  </Accordion>
+
+  <Accordion title="What's the agent_handshake tool for?">
+    `agent_handshake` personalizes MidOS for your specific setup:
+
+    ```python
+    agent_handshake(
+      model="claude-opus-4-6",
+      client="claude-code",
+      languages="python,typescript",
+      frameworks="fastapi,react"
+    )
+    ```
+
+    This tells MidOS:
+    - Which AI model you're using
+    - Which coding tool/CLI you're in
+    - Your preferred languages and frameworks
+
+    MidOS then prioritizes relevant knowledge in search results and provides model-specific guidance.
+  </Accordion>
+
+  <Accordion title="What tech stack does MidOS use?">
+    - **Server**: [FastMCP](https://github.com/jlowin/fastmcp) 2.x (streamable-http transport)
+    - **Vectors**: [LanceDB](https://lancedb.com) + Gemini embeddings (670K vectors, 3072-d)
+    - **Auth**: 2-tier API key middleware (dev → pro) with rate limiting
+    - **Pipeline**: 5-layer quality validation with myth-busting
+    - **Deploy**: Docker + Coolify (auto-deploy on push)
+    - **Language**: Python 3.11+
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MCP connection isn't working">
+    Try these steps:
+
+    1. **Verify URL**: Make sure you're using `https://mcp.midos.dev/mcp`
+    2. **Check transport**: Use streamable-http (not stdio)
+    3. **Restart your tool**: Reload Claude Code/Cursor/etc.
+    4. **Test connection**: Call `hive_status()` to verify MidOS is responding
+    5. **Check logs**: Look for MCP connection errors in your tool's logs
+
+    For self-hosted instances, ensure the server is running and accessible.
+  </Accordion>
+
+  <Accordion title="Pro tier features aren't working">
+    Verify:
+
+    1. **API key format**: Should be `Bearer midos_your_key_here`
+    2. **Header configuration**: Check that `Authorization` header is properly set
+    3. **Key validity**: Ensure your subscription is active at [midos.dev/pricing](https://midos.dev/pricing)
+    4. **Test**: Call `get_aotc()` or another Pro-tier tool to verify access
+  </Accordion>
+
+  <Accordion title="Search results aren't relevant">
+    Improve search results by:
+
+    1. **Use agent_handshake**: Tell MidOS your stack for personalized results
+    2. **Try different search modes**:
+       - `search_knowledge()` for broad searches
+       - `semantic_search()` for conceptual matches
+       - `hybrid_search()` for best of both
+       - `smart_search()` for automatic mode selection
+    3. **Be specific**: "React 19 Server Actions" vs "React"
+    4. **Use skill packs**: `get_skill("nextjs")` for comprehensive framework knowledge
+  </Accordion>
+</AccordionGroup>
+
+---
+
+<Card title="Still have questions?" icon="comments" href="https://github.com/MidOSresearch/midos/discussions">
+  Join our GitHub Discussions or open an issue
+</Card>

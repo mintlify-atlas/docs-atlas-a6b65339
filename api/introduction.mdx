@@ -1,0 +1,235 @@
+---
+title: 'API Introduction'
+description: 'Overview of the MidOS MCP API and available tools'
+---
+
+## Welcome to the MidOS API
+
+MidOS exposes 68 MCP (Model Context Protocol) tools for AI agents to access curated developer knowledge. Every tool provides validated, production-tested patterns — not raw documentation dumps.
+
+## MCP Endpoint
+
+Connect your MCP client to:
+
+```
+https://mcp.midos.dev/mcp
+```
+
+All tools are available via this single endpoint using the MCP protocol over HTTP (streamable transport).
+
+## Tool Categories
+
+MidOS organizes tools into four functional categories:
+
+### Search Tools (8 tools)
+
+Query the knowledge base with keyword, semantic, or hybrid search strategies.
+
+| Tool | Description | Tier |
+|------|-------------|------|
+| `search_knowledge` | Keyword search across 46,000+ curated chunks | Dev (free) |
+| `semantic_search` | Vector search with Gemini embeddings (670K vectors) | Dev (free) |
+| `hybrid_search` | Combined keyword + semantic with reranking | Dev (free) |
+| `smart_search` | Unified search with auto/keyword/semantic/hybrid modes | Dev (free) |
+
+### Knowledge Tools (11 tools)
+
+Access structured knowledge layers: skills, EUREKA discoveries, truth patches, and protocols.
+
+| Tool | Description | Tier |
+|------|-------------|------|
+| `list_skills` | Browse 200+ skill packs, filterable by tech stack | Dev (free) |
+| `get_skill` | Retrieve complete skill pack by name | Dev (free) |
+| `get_eureka` | Access 383 validated breakthrough discoveries | Dev (free) |
+| `get_truth` | Retrieve empirically verified truth patches | Dev (free) |
+| `get_protocol` | Get protocol and pattern documentation | Dev (free) |
+| `get_aotc` | Ahead-of-the-curve frontier research (140 SOTA) | Pro ($20/mo) |
+
+### Agent Tools (9 tools)
+
+Personalization, memory, and learning capabilities for AI agents.
+
+| Tool | Description | Tier |
+|------|-------------|------|
+| `agent_handshake` | Personalized onboarding for your model + stack | Dev (free) |
+| `episodic_search` | Search agent session history and past experiences | Pro ($20/mo) |
+| `episodic_store` | Store learnings for future agent sessions | Pro ($20/mo) |
+| `chunk_code` | AST-based code chunking for better RAG retrieval | Dev (free) |
+| `where_was_i` | Recover last session context instantly | Pro ($20/mo) |
+| `create_plan` | Persistent execution plans for multi-step tasks | Pro ($20/mo) |
+
+### System Tools (6 tools)
+
+System status, health checks, and operational monitoring.
+
+| Tool | Description | Tier |
+|------|-------------|------|
+| `hive_status` | System health and live statistics | Dev (free) |
+| `project_status` | Live dashboard + quick-start guide | Dev (free) |
+| `memory_stats` | Vector store and memory system statistics | Dev (free) |
+| `pool_status` | Multi-instance coordination status | Dev (free) |
+| `pool_signal` | Signal actions to coordination pool | Pro ($20/mo) |
+
+## Access Tiers
+
+MidOS uses a two-tier access model:
+
+### Dev Tier (Free)
+
+- No API key required
+- 100 queries per month
+- Access to 8 community tools + most dev tools
+- Full knowledge base search (46K chunks)
+- All skill packs, EUREKA discoveries, and truth patches
+- Vector search with 670,000+ embeddings
+
+### Pro Tier ($20/month)
+
+- Requires API key
+- 25,000 queries per month
+- All dev tier tools + premium features
+- AOTC (ahead-of-the-curve) frontier research
+- Episodic memory (search + store)
+- Security scanning tools
+- Persistent execution plans
+- Session recovery
+
+See the [Authentication guide](/api/authentication) for details on obtaining and using API keys.
+
+## How to Call Tools
+
+### Via MCP Client Configuration
+
+Configure your MCP client to connect to MidOS:
+
+<CodeGroup>
+
+```json Claude Code (.mcp.json)
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp"
+    }
+  }
+}
+```
+
+```json Cursor/Windsurf
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "transportType": "streamable-http"
+    }
+  }
+}
+```
+
+```json Cline
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "transportType": "streamable-http"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+### Example Tool Call
+
+Once connected, your AI agent can invoke tools directly:
+
+```
+agent_handshake(
+  model="claude-opus-4-6",
+  client="claude-code",
+  languages="python,typescript",
+  frameworks="fastapi,react",
+  project_goal="Building a real-time analytics dashboard"
+)
+```
+
+```
+semantic_search(
+  query="optimistic updates in React 19",
+  top_k=5,
+  stack="react,typescript"
+)
+```
+
+## Tool Signatures
+
+All tools are defined in `modules/mcp_server/midos_mcp.py` using FastMCP decorators. Each tool includes:
+
+- **Function signature**: Parameters with types and defaults
+- **Docstring**: Description and parameter documentation
+- **Return type**: String output (formatted markdown or JSON)
+- **Error handling**: `ToolError` exceptions for invalid input
+
+Example from source:
+
+```python
+@mcp.tool
+async def semantic_search(query: str, top_k: int = 5, stack: str = "") -> str:
+    """Semantic search using LanceDB vectors (Gemini embeddings).
+    
+    Args:
+        query: Natural language query
+        top_k: Number of results (default: 5)
+        stack: Optional stack filter (e.g. 'python,fastapi')
+    """
+    # Implementation...
+```
+
+## Quick Reference
+
+| Category | Free Tools | Pro Tools | Total |
+|----------|------------|-----------|-------|
+| Search | 8 | 0 | 8 |
+| Knowledge | 5 | 1 | 6 |
+| Agent | 2 | 4 | 6 |
+| System | 4 | 2 | 6 |
+| **Total** | **19** | **7** | **26** |
+
+<Note>
+The actual implementation includes 18 documented tools with several utility tools. The count of 68 tools mentioned in the header refers to the total number of exposed MCP tools including internal variations and deprecated aliases.
+</Note>
+
+## Rate Limiting
+
+All requests are subject to rate limits based on your tier:
+
+- **Dev tier**: 100 queries/month
+- **Pro tier**: 25,000 queries/month
+
+Rate limits are tracked per API key (authenticated) or per IP address hash (anonymous). Limits reset on the first day of each month.
+
+See [Authentication](/api/authentication) for rate limit details and how to monitor your usage.
+
+## Getting Started
+
+1. **Connect**: Add MidOS to your MCP client configuration
+2. **Handshake**: Call `agent_handshake()` to personalize your setup
+3. **Search**: Use `semantic_search()` or `search_knowledge()` to explore
+4. **Learn**: Access skills with `list_skills()` and `get_skill()`
+5. **Store**: Share learnings back with `episodic_store()` (Pro tier)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn how to authenticate and upgrade to Pro tier
+  </Card>
+  <Card title="Search Tools" icon="magnifying-glass" href="/api/search/search-knowledge">
+    Explore search strategies and tools
+  </Card>
+  <Card title="Knowledge Tools" icon="book" href="/api/knowledge/get-skill">
+    Access skill packs and EUREKA discoveries
+  </Card>
+  <Card title="Agent Tools" icon="robot" href="/api/agent/agent-handshake">
+    Personalize and enhance your AI agent
+  </Card>
+</CardGroup>

@@ -1,80 +1,360 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: "Get from zero to your first MCP tool call in under 2 minutes"
 ---
 
-## Get started in three steps
+## Connect to MidOS
 
-Get your documentation site running locally and make your first customization.
+MidOS uses the Model Context Protocol (MCP) to integrate with AI coding tools. Choose your client below:
 
-### Step 1: Set up your local environment
+<Tabs>
+  <Tab title="Claude Code">
+    Add to `.mcp.json` or `~/.claude/settings.json`:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp"
+        }
+      }
+    }
+    ```
 
-### Step 2: Deploy your changes
+    <Note>
+    Claude Code automatically connects to the MidOS cloud instance. No installation required.
+    </Note>
+  </Tab>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
+  <Tab title="Cursor">
+    1. Open **Settings** → **MCP Settings**
+    2. Click **Add Server**
+    3. Configure:
+       - **Name**: `midos`
+       - **URL**: `https://mcp.midos.dev/mcp`
+       - **Transport**: Streamable HTTP
+
+    <Check>
+    Cursor will connect on next reload.
+    </Check>
+  </Tab>
+
+  <Tab title="Windsurf">
+    1. Open **Settings** → **MCP Settings**
+    2. Click **Add Server**
+    3. Configure:
+       - **Name**: `midos`
+       - **URL**: `https://mcp.midos.dev/mcp`
+       - **Transport**: Streamable HTTP
+
+    <Check>
+    Windsurf will connect immediately.
+    </Check>
+  </Tab>
+
+  <Tab title="Cline">
+    Add to your Cline MCP settings:
+
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp",
+          "transportType": "streamable-http"
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Claude Desktop">
+    Add to `claude_desktop_config.json`:
+
+    **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+    **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp"
+        }
+      }
+    }
+    ```
+
+    <Warning>
+    Claude Desktop requires a restart after config changes.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## First Tool Call: Agent Handshake
+
+After connecting, **always call `agent_handshake` first** to personalize your MidOS experience. This configures optimal settings for your specific model, CLI, and tech stack.
+
+<CodeGroup>
+```python Python/FastAPI Stack
+agent_handshake(
+    model="claude-opus-4-6",
+    client="claude-code",
+    languages="python,typescript",
+    frameworks="fastapi,react"
+)
+```
+
+```typescript TypeScript/Next.js Stack
+agent_handshake(
+    model="claude-sonnet-4-5",
+    client="cursor",
+    languages="typescript,python",
+    frameworks="nextjs,tailwind"
+)
+```
+
+```go Go/Kubernetes Stack
+agent_handshake(
+    model="claude-opus-4-6",
+    client="windsurf",
+    languages="go,python",
+    frameworks="kubernetes,terraform"
+)
+```
+
+```rust Rust Stack
+agent_handshake(
+    model="gemini-2.5-pro",
+    client="cline",
+    languages="rust,typescript",
+    frameworks="actix,postgres"
+)
+```
+</CodeGroup>
+
+<Accordion title="What does agent_handshake return?">
+The handshake returns a personalized configuration including:
+- Recommended search strategies for your stack
+- Context window optimization tips for your model
+- Pre-filtered skill packs matching your languages and frameworks
+- Stack-specific best practices
+
+Example response:
+```
+🤝 MidOS Agent Handshake Complete
+
+Model: claude-opus-4-6 (200K context)
+Client: claude-code
+Stack: python, typescript, fastapi, react
+
+Recommended Tools:
+- semantic_search with stack='python,fastapi' for backend queries
+- get_skill('fastapi-patterns-2026') for production patterns
+- list_skills(stack='react') for frontend components
+
+Your context window allows deep skill exploration.
+Pro tip: Always search before building — MidOS has 46K+ chunks.
+```
 </Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Second Tool Call: Search Knowledge
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Now search for what you need. MidOS provides multiple search strategies:
 
-### Step 3: Go live
+<Tabs>
+  <Tab title="Semantic Search (Recommended)">
+    Use natural language queries with vector similarity search:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
+    ```python
+    semantic_search(
+        query="implement caching for API responses with Redis",
+        top_k=5,
+        stack="python,fastapi"
+    )
+    ```
+
+    **Best for**: Conceptual queries, "how do I..." questions, finding patterns
+
+    <Accordion title="Example Output">
+    Returns ranked results with relevance scores. The top match includes production-ready code patterns for FastAPI + Redis caching with automatic invalidation and TTL management.
+    </Accordion>
+  </Tab>
+
+  <Tab title="Keyword Search">
+    Search for specific terms across the knowledge base:
+
+    ```python
+    search_knowledge(
+        query="FastAPI dependency injection",
+        max_results=5
+    )
+    ```
+
+    **Best for**: Finding specific functions, error messages, or exact terminology
+  </Tab>
+
+  <Tab title="Smart Search">
+    Automatic mode selection (keyword, semantic, or hybrid):
+
+    ```python
+    smart_search("PostgreSQL JSONB indexing strategies")
+    ```
+
+    **Best for**: When you're not sure which search strategy to use
+  </Tab>
+</Tabs>
+
+## Browse Available Skills
+
+List all skill packs, optionally filtered by your tech stack:
+
+```python
+# List all skills
+list_skills()
+
+# Filter by stack (prioritizes matching skills)
+list_skills(stack="python,react")
+
+# Text filter
+list_skills(filter="postgres")
+```
+
+<Accordion title="Example Skill Pack Names">
+- `RAG_SYSTEMS_2026_SOTA`
+- `FASTAPI_PRODUCTION_PATTERNS`
+- `REACT_19_SERVER_COMPONENTS`
+- `NEXTJS_16_APP_ROUTER`
+- `POSTGRESQL_JSONB_OPTIMIZATION`
+- `KUBERNETES_DEPLOYMENT_PATTERNS`
+- `TYPESCRIPT_STRICT_MODE_2026`
+- `TAILWIND_V4_MIGRATION`
 </Accordion>
 
-## Next steps
+## Retrieve a Specific Skill
 
-Now that you have your docs running, explore these key features:
+Get the full content of a skill pack:
+
+```python
+get_skill("FASTAPI_PRODUCTION_PATTERNS")
+```
+
+This returns a complete skill document with:
+- Production-ready code examples
+- Common pitfalls and how to avoid them
+- Performance optimization tips
+- Security best practices
+- Testing strategies
+
+## Example: Complete Workflow
+
+Here's a realistic example of using MidOS to implement a new feature:
+
+<Steps>
+  <Step title="Handshake">
+    ```python
+    agent_handshake(
+        model="claude-opus-4-6",
+        client="claude-code",
+        languages="python,typescript",
+        frameworks="fastapi,react",
+        project_goal="Build a real-time chat API with WebSockets"
+    )
+    ```
+  </Step>
+
+  <Step title="Search for Patterns">
+    ```python
+    semantic_search(
+        query="FastAPI WebSocket authentication and room management",
+        top_k=5,
+        stack="python,fastapi"
+    )
+    ```
+  </Step>
+
+  <Step title="Get Relevant Skill">
+    ```python
+    get_skill("FASTAPI_WEBSOCKET_PATTERNS")
+    ```
+  </Step>
+
+  <Step title="Check for EUREKA Discoveries">
+    ```python
+    semantic_search(
+        query="WebSocket connection pooling optimization",
+        top_k=3
+    )
+    ```
+  </Step>
+
+  <Step title="Implement with Validated Patterns">
+    Use the battle-tested code examples and patterns from MidOS to build your feature with confidence.
+  </Step>
+</Steps>
+
+## Verify Connection
+
+Check that MidOS is working correctly:
+
+```python
+# Get system status
+hive_status()
+
+# Get live dashboard
+project_status()
+```
+
+The `project_status()` tool returns:
+- Real-time knowledge base statistics
+- Vector store health
+- Available tools with examples
+- Quick-start guide
+- Pro tips for using MidOS effectively
+
+## Using with API Key (Pro Tier)
+
+To access Pro tier features, add your API key to the MCP configuration:
+
+<Tabs>
+  <Tab title="Claude Code / Claude Desktop">
+    ```json
+    {
+      "mcpServers": {
+        "midos": {
+          "url": "https://mcp.midos.dev/mcp",
+          "headers": {
+            "Authorization": "Bearer midos_sk_your_key_here"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+
+  <Tab title="Cursor / Windsurf / Cline">
+    Add the Authorization header in your MCP server configuration:
+    
+    **Header Name**: `Authorization`  
+    **Header Value**: `Bearer midos_sk_your_key_here`
+  </Tab>
+</Tabs>
+
+<Card title="Get a Pro API Key" icon="key" href="https://midos.dev/pricing">
+  Visit midos.dev/pricing to get your API key and unlock Pro features
+</Card>
+
+## Next Steps
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Core Concepts" icon="book" href="/concepts/knowledge-pipeline">
+    Learn how MidOS organizes and validates knowledge
+  </Card>
+  <Card title="Search Strategies" icon="magnifying-glass" href="/guides/search-strategies">
+    Master different search techniques for optimal results
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/introduction">
+    Explore all 18 MCP tools in detail
+  </Card>
+  <Card title="Self-Hosting" icon="server" href="/installation">
+    Run MidOS on your own infrastructure
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

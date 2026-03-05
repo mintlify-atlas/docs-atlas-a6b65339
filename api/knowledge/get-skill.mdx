@@ -1,0 +1,102 @@
+---
+title: 'get_skill'
+description: 'Retrieve a specific skill document from the MidOS knowledge base'
+icon: 'file-code'
+---
+
+## Overview
+
+The `get_skill` tool retrieves a specific skill/capability document by name. Skills contain specialized knowledge, patterns, and best practices for various technologies, frameworks, and development workflows.
+
+## Function Signature
+
+```python
+async def get_skill(name: str) -> str
+```
+
+## Parameters
+
+<ParamField path="name" type="string" required>
+  The skill name to retrieve. Case-insensitive matching is supported.
+  
+  Examples:
+  - `"react"` - React framework patterns
+  - `"fastapi"` - FastAPI best practices
+  - `"RAG_SYSTEMS_2026_SOTA"` - State-of-the-art RAG patterns
+  - `"docker-containerization"` - Docker containerization guide
+</ParamField>
+
+## Return Value
+
+Returns a string containing:
+- **Success**: Full content of the skill document in Markdown format
+- **Not Found**: Error message with list of available skills (up to 20)
+
+```
+Skill not found: {name}
+
+Available skills: ['react', 'fastapi', 'docker-containerization', ...]
+```
+
+## Behavior
+
+1. **Exact Match**: First attempts to find an exact match for `{name}.md`
+2. **Case-Insensitive Search**: If no exact match, performs case-insensitive search
+3. **Error with Suggestions**: Returns helpful error with available skill names
+
+## Usage Examples
+
+### Retrieve a React Skill
+
+```python
+result = await get_skill(name="react")
+# Returns full React patterns and best practices document
+```
+
+### Get FastAPI Patterns
+
+```python
+result = await get_skill(name="fastapi")
+# Returns FastAPI skill with API design patterns
+```
+
+### Case-Insensitive Lookup
+
+```python
+# These are equivalent:
+result = await get_skill(name="Docker-Containerization")
+result = await get_skill(name="docker-containerization")
+result = await get_skill(name="DOCKER_CONTAINERIZATION")
+```
+
+### Handle Missing Skills
+
+```python
+result = await get_skill(name="nonexistent")
+# Returns: "Skill not found: nonexistent\n\nAvailable skills: [...]"
+```
+
+## Available Skills
+
+Some commonly used skills include:
+
+- **Frontend**: `react`, `angular`, `svelte-v5-patterns`, `htmx_interactivity`
+- **Backend**: `fastapi`, `django_v5`, `nestjs_v11`, `laravel`
+- **Databases**: `postgresql`, `mongodb_document_db`, `redis_caching_patterns`
+- **DevOps**: `docker-containerization`, `kubernetes_orchestration`, `terraform_iac`
+- **Architecture**: `microservices_architecture`, `event_driven_architecture`, `domain_driven_design`
+- **AI/ML**: `SKILL_TEXT_CHUNKING`, `SKILL_JINA_AI`, `token_efficiency_free_models`
+
+Use [`list_skills`](/api/knowledge/list-skills) to see all available skills.
+
+## Related Tools
+
+- [`list_skills`](/api/knowledge/list-skills) - List all available skills with optional filtering
+- [`search_knowledge`](/api/search/search-knowledge) - Search across all knowledge base content
+- [`semantic_search`](/api/search/semantic-search) - Vector-based semantic search with stack filtering
+
+## Source Location
+
+Skills are stored in: `knowledge/skills/`
+
+Source: `modules/mcp_server/midos_mcp.py:241-259`

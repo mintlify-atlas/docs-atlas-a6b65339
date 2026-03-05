@@ -1,97 +1,203 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "MidOS Documentation"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden dark:bg-[#0B172A] bg-[#f8fafc] py-20">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold dark:text-white text-gray-900 mb-6">
+          Curated Knowledge API for AI Agents
+        </h1>
+        <p className="text-lg sm:text-xl dark:text-gray-400 text-gray-600 max-w-2xl mb-8">
+          68 MCP tools, 200+ skill packs, 46K curated chunks, semantic search over 670K vectors. Not raw docs — battle-tested patterns from real projects.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-[#00a67e] text-white font-semibold hover:bg-[#00C48C] transition-colors"
+          >
+            Get Started
+          </a>
+          <a
+            href="/api/introduction"
+            className="inline-flex items-center px-6 py-3 rounded-lg border border-gray-300 dark:border-white/30 dark:bg-white/10 bg-white dark:text-white text-gray-900 font-semibold hover:border-[#00C48C] dark:hover:border-[#00C48C] transition-colors"
+          >
+            Explore API Reference
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold dark:text-white text-gray-900 mb-4">
+    Quick Start
+  </h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8 max-w-3xl">
+    Connect to MidOS in seconds and start accessing curated knowledge for your AI agent.
+  </p>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Add MidOS to your MCP configuration">
+      Configure your AI coding tool to connect to the MidOS MCP server.
 
-## Make it yours
+      <CodeGroup>
+      ```json Claude Code (.mcp.json)
+      {
+        "mcpServers": {
+          "midos": {
+            "url": "https://mcp.midos.dev/mcp"
+          }
+        }
+      }
+      ```
 
-Design a docs site that looks great and empowers your users.
+      ```json Cursor / Windsurf (MCP Settings)
+      {
+        "mcpServers": {
+          "midos": {
+            "url": "https://mcp.midos.dev/mcp",
+            "transportType": "streamable-http"
+          }
+        }
+      }
+      ```
+      </CodeGroup>
+    </Step>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+    <Step title="Call agent_handshake for personalized setup">
+      Tell MidOS about your environment to get optimized results.
+
+      ```bash
+      agent_handshake(
+        model="claude-opus-4-6",
+        client="claude-code",
+        languages="python,typescript",
+        frameworks="fastapi,react"
+      )
+      ```
+    </Step>
+
+    <Step title="Search the knowledge base">
+      Use semantic search to find battle-tested patterns and skills.
+
+      ```bash
+      semantic_search("React 19 Server Components patterns")
+      ```
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold dark:text-white text-gray-900 mb-4">
+    Explore by Topic
+  </h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">
+    Everything you need to leverage MidOS in your AI development workflow.
+  </p>
+
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Core Concepts"
+      icon="lightbulb"
+      href="/concepts/knowledge-pipeline"
+    >
+      Understand the 5-layer validation pipeline and how knowledge is curated.
+    </Card>
+    <Card
+      title="Skill Packs"
+      icon="box"
+      href="/concepts/skill-packs"
+    >
+      Browse 200+ production-tested patterns across 20+ tech stacks.
+    </Card>
+    <Card
+      title="Search Strategies"
+      icon="magnifying-glass"
+      href="/guides/search-strategies"
+    >
+      Learn when to use keyword, semantic, or hybrid search for best results.
+    </Card>
+    <Card
+      title="Agent Handshake"
+      icon="handshake"
+      href="/guides/agent-handshake"
+    >
+      Personalize your agent's experience with model and stack-aware onboarding.
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold dark:text-white text-gray-900 mb-4">
+    API Tools
+  </h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">
+    68 MCP tools for accessing curated knowledge, semantic search, and agent personalization.
+  </p>
 
-Everything you need to create world-class documentation.
+  <CardGroup cols={3}>
+    <Card
+      title="search_knowledge"
+      icon="search"
+      href="/api/search/search-knowledge"
+    >
+      Keyword search across 46K+ curated chunks
+    </Card>
+    <Card
+      title="semantic_search"
+      icon="brain"
+      href="/api/search/semantic-search"
+    >
+      Vector search with Gemini embeddings (670K vectors)
+    </Card>
+    <Card
+      title="hybrid_search"
+      icon="shuffle"
+      href="/api/search/hybrid-search"
+    >
+      Combined keyword + semantic with reranking
+    </Card>
+    <Card
+      title="get_skill"
+      icon="graduation-cap"
+      href="/api/knowledge/get-skill"
+    >
+      Fetch production-tested skill packs by name
+    </Card>
+    <Card
+      title="get_eureka"
+      icon="star"
+      href="/api/knowledge/get-eureka"
+    >
+      Access 383 validated breakthrough discoveries
+    </Card>
+    <Card
+      title="agent_handshake"
+      icon="handshake"
+      href="/api/agent/agent-handshake"
+    >
+      Personalized onboarding for your agent
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="dark:bg-[#1a1d27] bg-gray-50 dark:border-[#27272a] border-gray-200 border rounded-2xl p-8">
+    <h2 className="text-2xl font-semibold dark:text-white text-gray-900 mb-3">
+      Ready to get started?
+    </h2>
+    <p className="dark:text-gray-400 text-gray-600 mb-6 max-w-2xl">
+      Connect your AI coding tool to MidOS and access battle-tested knowledge for your next project.
+    </p>
+    <a
+      href="/quickstart"
+      className="inline-flex items-center px-6 py-3 rounded-lg bg-[#00a67e] text-white font-semibold hover:bg-[#00C48C] transition-colors"
+    >
+      Start Building
+    </a>
+  </div>
+</div>

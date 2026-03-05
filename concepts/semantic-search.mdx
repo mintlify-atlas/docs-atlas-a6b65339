@@ -1,0 +1,636 @@
+---
+title: "Semantic Search"
+description: "LanceDB + Gemini embeddings with hybrid search architecture"
+---
+
+# Semantic Search
+
+MidOS uses a **hybrid search architecture** combining semantic vector search with keyword-based BM25, powered by LanceDB and Gemini embeddings. This provides superior retrieval over either approach alone.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Query: "async error handling in FastAPI"                  │
+└─────────────────────────────────────────────────────────────┘
+                       ↓
+            ┌──────────┴──────────┐
+            ↓                     ↓
+┌──────────────────────┐  ┌──────────────────────┐
+│  Semantic Search     │  │  Keyword Search      │
+│  (Vector + Gemini)   │  │  (BM25 FTS)          │
+│                      │  │                      │
+│  • Query → Embedding │  │  • Tokenize query    │
+│  • 3072-d vector     │  │  • BM25 scoring      │
+│  • Cosine similarity │  │  • Exact matches     │
+│  • Top 30 results    │  │  • Top 30 results    │
+└──────────────────────┘  └──────────────────────┘
+            ↓                     ↓
+            └──────────┬──────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Reciprocal Rank Fusion (RRF)                               │
+│  score(doc) = α/(vec_rank+k) + (1-α)/(kw_rank+k)           │
+│  k=60, α=0.5 (equal weight by default)                     │
+└─────────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Optional Reranking                                         │
+│  • Cross-encoder (best quality)                             │
+│  • Fallback: decay score + keyword overlap                  │
+└─────────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Top-k Results (default: 5)                                 │
+│  • Ranked by fused score                                    │
+│  • With source, confidence, metadata                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Components
+
+### 1. Vector Database: LanceDB
+
+**Why LanceDB?**
+- Fast vector search with disk-based storage
+- Supports full-text search (FTS) natively
+- Efficient for 670K+ vectors
+- Easy versioning and snapshots
+- Python-native API
+
+**Schema**:
+```python
+{
+    "text": str,              # Original text chunk
+    "vector": List[float],    # 3072-d embedding from Gemini
+    "source": str,            # File path (e.g., "skills/fastapi.md")
+    "timestamp": float,       # Unix timestamp (creation time)
+    "metadata": str,          # JSON string with tags, layer, etc.
+    "last_accessed": float,   # Last retrieval time (decay tracking)
+    "access_count": int,      # Number of times accessed
+    "decay_score": float      # Computed freshness score
+}
+```
+
+**Location**: `~/.local/share/midos/L1_MEMORY/knowledge_chunks_cloud_rebuild/`
+
+**Current Scale**: 670K vectors (1,260 knowledge items × avg 531 chunks each)
+
+### 2. Embeddings: Gemini
+
+**Model**: `gemini-embedding-001`
+
+**Specifications**:
+- **Dimensions**: 3072
+- **Context window**: 2048 tokens
+- **Cost**: Free tier (1,500 requests/day)
+- **Latency**: ~200ms per embedding
+
+**Why Gemini?**
+- High-quality semantic understanding
+- Large dimensionality (3072-d) captures nuance
+- Free tier sufficient for most usage
+- Supports batch embeddings (50 per request)
+
+**Embedding Process**:
+```python
+from google import genai
+
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Single embedding
+response = client.models.embed_content(
+    model="models/gemini-embedding-001",
+    contents="FastAPI async route handlers"
+)
+vector = response.embeddings[0].values  # 3072-d float array
+
+# Batch embedding (faster)
+response = client.models.embed_content(
+    model="models/gemini-embedding-001",
+    contents=["text1", "text2", ..., "text50"]  # Up to 50
+)
+vectors = [emb.values for emb in response.embeddings]
+```
+
+**Caching**: In-memory cache for embeddings (SHA256 hash key) to avoid re-embedding identical text within a session.
+
+**Performance**:
+- Original: ~1200ms/text (1 API call each)
+- Batch only: ~35ms/text (50 per call)
+- Batch + concurrent (4 workers): ~19ms/text
+- With cache hit: ~0ms/text (no API call)
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:59-191`
+
+### 3. Hybrid Search: Vector + BM25
+
+**Search Modes**:
+
+```python
+from midos import search_memory
+
+# 1. Vector-only (semantic)
+results = search_memory(
+    query="async patterns",
+    search_mode="vector",
+    top_k=5
+)
+
+# 2. Keyword-only (BM25)
+results = search_memory(
+    query="FastAPI async",
+    search_mode="keyword",
+    top_k=5
+)
+
+# 3. Hybrid (default, best results)
+results = search_memory(
+    query="async error handling",
+    search_mode="hybrid",  # Default
+    alpha=0.5,  # 0.0=pure keyword, 1.0=pure vector
+    top_k=5
+)
+```
+
+**Benchmark Results** (EUREKA_HYBRID_SEARCH_RRF_2026):
+
+| Method | Relevance Score | Dataset |
+|--------|----------------:|--------:|
+| Vector-only | 0.78 | 9,753 vectors |
+| Keyword-only | 0.71 | 300 test queries |
+| **Hybrid (RRF)** | **0.85** | **+9.3% improvement** |
+
+### 4. Reciprocal Rank Fusion (RRF)
+
+RRF merges ranked result lists from multiple sources:
+
+**Formula**:
+```python
+score(doc) = α * (1 / (vec_rank + k)) + (1 - α) * (1 / (kw_rank + k))
+```
+
+Where:
+- `vec_rank`: Position in vector search results (0-based)
+- `kw_rank`: Position in keyword search results (0-based)
+- `k`: Constant (default: 60, standard RRF value)
+- `α`: Weight (default: 0.5 = equal weight)
+
+**Example**:
+
+```
+Vector results:      Keyword results:
+1. Doc A             1. Doc B
+2. Doc B             2. Doc A  
+3. Doc C             3. Doc D
+
+RRF scores (k=60, α=0.5):
+Doc A: 0.5/(0+60) + 0.5/(1+60) = 0.0083 + 0.0082 = 0.0165
+Doc B: 0.5/(1+60) + 0.5/(0+60) = 0.0082 + 0.0083 = 0.0165
+Doc C: 0.5/(2+60) + 0.0        = 0.0081
+Doc D: 0.0        + 0.5/(2+60) = 0.0081
+
+Final ranking: A, B, C, D (A and B tied, both found in both sources)
+```
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:586-616`
+
+## When to Use Each Search Method
+
+### Vector Search (Semantic)
+
+**Best for**:
+- Conceptual queries ("how to handle errors")
+- Synonyms and paraphrasing ("async" = "asynchronous")
+- Cross-language understanding
+- Abstract concepts
+
+**Examples**:
+- "patterns for background tasks" → finds "async job queues", "celery workers"
+- "authentication best practices" → finds OAuth2, JWT, session management
+- "scaling strategies" → finds load balancing, caching, sharding
+
+**Limitations**:
+- Misses exact technical terms sometimes
+- Can be too "creative" (false positives)
+- Slower (requires embedding + vector search)
+
+### Keyword Search (BM25)
+
+**Best for**:
+- Exact function/class names ("Depends", "BackgroundTasks")
+- Version numbers ("FastAPI 0.109")
+- Error messages ("RuntimeError: cannot schedule new futures")
+- Specific filenames
+
+**Examples**:
+- "FastAPI Depends()" → exact match on dependency injection
+- "pydantic v2" → version-specific results
+- "RuntimeError" → exact error type
+
+**Limitations**:
+- No semantic understanding
+- Misses synonyms ("async" ≠ "asynchronous")
+- Sensitive to exact wording
+
+### Hybrid Search (Recommended)
+
+**Best for**:
+- General queries (default choice)
+- Combining concepts with specifics ("FastAPI async error handling")
+- When you're not sure what you're looking for
+- Production usage (most robust)
+
+**Examples**:
+- "FastAPI async error handling" → semantic understanding + exact term matching
+- "Pydantic v2 validation patterns" → version specificity + concept understanding
+- "Redis caching strategies" → tech term + concept
+
+**Benefits**:
+- +9.3% relevance over vector-only
+- Catches both semantic and exact matches
+- Robust to query phrasing
+
+## Query Expansion
+
+Short queries are automatically expanded with domain context:
+
+```python
+def expand_query(query: str) -> str:
+    """Expand short queries for better embedding match."""
+    if len(query) > 60:
+        return query  # Already descriptive
+    
+    expansions = {
+        "caching": "caching response cache semantic cache performance",
+        "testing": "testing unit test integration test e2e playwright vitest",
+        "deployment": "deployment deploy production CI/CD docker kubernetes",
+        "security": "security authentication authorization OWASP vulnerability",
+        "fastapi": "FastAPI Python web framework async Pydantic",
+        "react": "React hooks components state management JSX",
+        # ... 20+ expansions
+    }
+    
+    for term, expansion in expansions.items():
+        if term in query.lower():
+            return f"{query} — {expansion}"
+    
+    return query
+
+# Example
+expand_query("caching") 
+→ "caching — caching response cache semantic cache performance"
+```
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:247-285`
+
+## Reranking
+
+Optional second-pass reranking for higher precision:
+
+### Cross-Encoder Reranking (Best Quality)
+
+Uses `cross-encoder/ms-marco-MiniLM-L-6-v2` for query-document scoring:
+
+```python
+results = search_memory(
+    query="async error handling",
+    top_k=5,
+    rerank=True  # Enable reranking
+)
+```
+
+**How it works**:
+1. Retrieve 30 candidates (top_k × 3) via hybrid search
+2. Cross-encoder scores each (query, doc) pair
+3. Re-sort by cross-encoder score
+4. Return top_k
+
+**Trade-offs**:
+- ✓ Higher precision (+5-10% typical)
+- ✗ Slower (adds ~200ms)
+- ✗ Requires sentence-transformers library
+
+### Fallback Reranking
+
+If cross-encoder unavailable, uses decay score + keyword overlap:
+
+```python
+score = 0.6 * (1 / rank) + 0.4 * (keyword_overlap)
+```
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:618-671`
+
+## Memory Decay Integration
+
+Search integrates with the knowledge pipeline's decay system:
+
+**Decay Score Formula**:
+```python
+decay_score = base_quality * time_factor * access_boost
+where:
+  time_factor = 0.95 ^ days_since_access
+  access_boost = log(access_count + 1)
+```
+
+**Search Updates Decay**:
+- Every retrieval updates `last_accessed` timestamp
+- Increments `access_count`
+- Resets decay timer (freshness)
+
+**Decay-Aware Queries**:
+```python
+# Get stale knowledge
+stale = get_decay_report(limit=20)
+for item in stale:
+    print(f"{item['source']}: decay={item['decay_score']:.3f}")
+
+# Refresh a chunk (reset decay)
+refresh_chunk("FastAPI async patterns...")
+```
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:681-759`
+
+## Caching Strategy
+
+### Embedding Cache
+
+**In-memory cache** for generated embeddings:
+
+```python
+_embedding_cache: Dict[str, List[float]] = {}
+# Key: SHA256 hash of text (first 16 chars)
+# Value: 3072-d embedding vector
+```
+
+**Cache key**: `hashlib.sha256(text.encode()).hexdigest()[:16]`
+
+**Hit rate**: ~60% in typical sessions (many repeated queries)
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:28-38`
+
+### Query Cache
+
+**Time-based cache** for search results:
+
+```python
+_query_cache: Dict[str, Tuple[float, List[Dict]]] = {}
+# Key: hash(query + top_k + search_mode + rerank + alpha)
+# Value: (timestamp, results)
+```
+
+**TTL**: 60 seconds
+
+**Max entries**: 100 (LRU eviction)
+
+**Hit rate**: ~40% in typical sessions (users refine queries)
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:400-410`
+
+### Query Embedding Cache
+
+**LRU cache** for query embeddings:
+
+```python
+_QUERY_EMBEDDING_CACHE: Dict[str, Tuple[float, List[float]]] = {}
+```
+
+**TTL**: 300 seconds (5 minutes)
+
+**Max entries**: 100
+
+**Savings**: 1-2s per cached hit (avoids Gemini API call)
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:288-329`
+
+## Usage Examples
+
+### Basic Search
+
+```python
+from midos import search_memory
+
+# Simple hybrid search (recommended)
+results = search_memory("FastAPI async patterns", top_k=5)
+
+for result in results:
+    print(f"Source: {result['source']}")
+    print(f"Score: {result['score']:.3f}")
+    print(f"Text: {result['text'][:200]}")
+    print("---")
+```
+
+### Advanced Search with Filters
+
+```python
+# Search specific layer
+results = search_memory(
+    query="token optimization",
+    top_k=3,
+    search_mode="hybrid",
+    metadata_filter={"layer": "EUREKA"}
+)
+
+# Search specific stack
+results = search_memory(
+    query="async patterns",
+    metadata_filter={"stack": "fastapi"}
+)
+```
+
+### Custom Alpha (Vector/Keyword Balance)
+
+```python
+# More semantic (0.8 = 80% vector, 20% keyword)
+results = search_memory(
+    query="error handling strategies",
+    alpha=0.8,
+    top_k=5
+)
+
+# More keyword-focused (0.2 = 20% vector, 80% keyword)  
+results = search_memory(
+    query="FastAPI Depends",
+    alpha=0.2,
+    top_k=5
+)
+```
+
+### With Reranking
+
+```python
+# Enable cross-encoder reranking
+results = search_memory(
+    query="production deployment patterns",
+    top_k=5,
+    rerank=True  # Adds ~200ms, improves precision
+)
+```
+
+### CLI Usage
+
+```bash
+# Basic search
+midos search "FastAPI async patterns"
+
+# Search specific layer
+midos search "token optimization" --layer eureka
+
+# Vector-only search
+midos search "error handling" --mode vector
+
+# Keyword-only search
+midos search "Depends()" --mode keyword
+
+# Custom alpha
+midos search "caching" --alpha 0.7
+
+# With reranking
+midos search "deployment" --rerank
+
+# Search with metadata filter
+midos search "patterns" --stack fastapi --layer skills
+```
+
+## Performance Optimization
+
+### Batch Embedding
+
+**50x faster** than sequential embedding:
+
+```python
+# ❌ Slow: sequential
+for text in texts:
+    vector = get_embedding(text)  # 1200ms each
+
+# ✅ Fast: batch + concurrent
+vectors = get_embeddings_batch(
+    texts,
+    batch_size=50,      # 50 texts per API call
+    max_workers=4       # 4 concurrent API calls
+)  # ~19ms per text
+```
+
+**Speedup breakdown**:
+- Batch-only: 1200ms → 35ms (34x)
+- Batch + concurrent: 35ms → 19ms (63x)
+- With cache: 19ms → 0ms (∞x)
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:86-191`
+
+### Batch Storage
+
+**50x faster** than sequential chunk storage:
+
+```python
+# ❌ Slow: sequential
+for chunk in chunks:
+    store_wisdom_chunk(chunk["text"], chunk["source"])
+
+# ✅ Fast: batch
+store_wisdom_chunks_batch(chunks)
+```
+
+**Why faster**:
+- 1 API call per 50 texts (vs 1 per text)
+- 1 LanceDB write per batch (vs 1 per chunk)
+
+**Implementation**: `source/hive_commons/src/hive_commons/vector_store.py:194-244`
+
+## Monitoring
+
+### Memory Stats
+
+```python
+from midos import get_memory_stats
+
+stats = get_memory_stats()
+print(stats)
+# {
+#   "status": "online",
+#   "engine": "lancedb_hybrid (gemini-embedding-001 + BM25 RRF + decay)",
+#   "table": "knowledge_chunks_cloud_rebuild",
+#   "total_chunks": 670000
+# }
+```
+
+### Decay Report
+
+```python
+from midos import get_decay_report
+
+# Get 20 stalest chunks
+stale = get_decay_report(limit=20)
+for chunk in stale:
+    print(f"{chunk['source']}: {chunk['decay_score']:.4f}")
+    print(f"  Last accessed: {chunk['last_accessed_days_ago']:.1f} days ago")
+    print(f"  Access count: {chunk['access_count']}")
+```
+
+### CLI Monitoring
+
+```bash
+# Memory stats
+midos memory stats
+
+# Decay report
+midos memory decay-report --limit 20
+
+# Refresh stale chunk
+midos memory refresh "FastAPI async..."
+
+# Archive outdated chunk
+midos memory archive "Old 2024 pattern..."
+
+# Batch rescore (run weekly)
+midos memory batch-rescore
+```
+
+## Best Practices
+
+### Query Writing
+
+1. **Be specific for exact matches**:
+   - ✓ "FastAPI Depends() dependency injection"
+   - ✗ "how to use dependencies"
+
+2. **Use concepts for semantic search**:
+   - ✓ "authentication best practices"
+   - ✗ "auth stuff"
+
+3. **Combine tech terms + concepts**:
+   - ✓ "Redis caching patterns for session data"
+   - ✗ "redis" (too vague)
+
+4. **Let hybrid search decide**:
+   - Default to `search_mode="hybrid"`
+   - Only use vector/keyword if you have specific needs
+
+### Performance
+
+1. **Use batch operations** for bulk indexing
+2. **Enable caching** (automatic, but be aware of TTLs)
+3. **Monitor decay scores** to keep knowledge fresh
+4. **Archive stale content** to reduce search space
+
+### Accuracy
+
+1. **Start with top_k=5**, increase if needed
+2. **Use reranking** for critical queries (adds latency)
+3. **Tune alpha** if results skew too semantic or too literal
+4. **Filter by metadata** (layer, stack) for precision
+
+## Related Concepts
+
+- [Knowledge Pipeline](/concepts/knowledge-pipeline) — How search integrates with 5 layers
+- [Skill Packs](/concepts/skill-packs) — Layer 2 content structure
+- [EUREKA System](/concepts/eureka-system) — Layer 4 validated discoveries
+
+## Implementation Reference
+
+- Vector store: `source/hive_commons/src/hive_commons/vector_store.py`
+- LanceDB setup: `vector_store.py:392-477`
+- Hybrid search: `vector_store.py:479-583`
+- RRF fusion: `vector_store.py:586-616`
+- Reranking: `vector_store.py:618-671`
+- Decay integration: `vector_store.py:681-864`

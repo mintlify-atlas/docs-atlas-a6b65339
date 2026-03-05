@@ -1,0 +1,457 @@
+---
+title: "episodic_search"
+description: "Search episodic memory for similar past experiences"
+---
+
+# episodic_search
+
+Search episodic memory for similar past agent experiences using vector similarity. Helps agents learn from their own history and avoid repeating mistakes.
+
+## Overview
+
+Episodic memory is MidOS's learning system for agents. Unlike semantic search (which queries the knowledge base), `episodic_search` queries **your own past task experiences** stored via `episodic_store`.
+
+**Use cases:**
+- "Have I debugged this error before?"
+- "What approach worked for similar refactoring tasks?"
+- "Did I already research this topic?"
+- "What patterns failed in previous implementations?"
+
+**How it works:**
+1. Query is embedded using the same vector model as knowledge base
+2. Searches stored reflexions via cosine similarity
+3. Returns top N matches with relevance scores
+4. Each result shows task type, context preview, and success status
+
+## Function Signature
+
+```python
+async def episodic_search(
+    query: str,
+    limit: int = 5
+) -> str
+```
+
+## Parameters
+
+### `query` (required)
+
+**Type:** `str`
+
+Search query describing the experience or task you want to recall.
+
+**Examples:**
+- `"debugging WebSocket connection timeout"`
+- `"refactoring FastAPI middleware for authentication"`
+- `"researching Redis pub/sub patterns"`
+- `"fixing TypeScript type errors in React hooks"`
+- `"implementing retry logic for API calls"`
+
+**Best practices:**
+- Be specific: `"PostgreSQL connection pooling config"` > `"database"`
+- Include context: `"React useEffect cleanup memory leak"` > `"memory leak"`
+- Use technical terms: `"JWT token validation middleware"` > `"auth"`
+- Describe the task, not the outcome: `"adding tests"` > `"successful tests"`
+
+### `limit` (optional)
+
+**Type:** `int`  
+**Default:** `5`
+
+Maximum number of results to return.
+
+**Range:** 1-20 (practical limit)  
+**Recommendation:** Use 3-5 for focused recall, 10+ for exploration
+
+## Response Format
+
+Returns a markdown-formatted string with ranked results:
+
+```
+Found 3 episodic memories:
+
+### 1. Score: 0.872
+Implemented WebSocket reconnection with exponential backoff...
+
+### 2. Score: 0.743
+Debugged race condition in async task queue...
+```
+
+**Score interpretation:**
+- **0.9-1.0**: Near-exact match (same task/context)
+- **0.7-0.9**: High relevance (similar task type)
+- **0.5-0.7**: Moderate relevance (related domain)
+- **Below 0.5**: Low relevance (often filtered out)
+
+**Preview truncation:**
+- Shows first 300 characters of each reflexion
+- Includes task type, input, approach, outcome, and reflection
+- Full reflexion stored in `~/.midos/memory/episodic/reflexions.jsonl`
+
+## Example Usage
+
+### Basic search
+
+```python
+result = await episodic_search(
+    query="debugging API timeout errors"
+)
+```
+
+**Response:**
+```markdown
+Found 3 episodic memories:
+
+### 1. Score: 0.891
+```
+Task: DEBUG | Input: FastAPI endpoint returning 504 timeout
+Approach: Added connection pooling with max_overflow=10, reduced query complexity
+Outcome: SUCCESS | Latency reduced from 35s to 2.3s
+Reflection: Connection pool exhaustion was root cause. Always check pool stats first.
+```
+
+### 2. Score: 0.764
+```
+Task: DEBUG | Input: WebSocket disconnect after 30s idle
+Approach: Implemented ping/pong keep-alive with 15s interval
+Outcome: SUCCESS | Connections stable for 8h+ sessions
+Reflection: Default timeouts vary by deployment. Document required keep-alive config.
+```
+
+### 3. Score: 0.652
+```
+Task: REVIEW | Input: API error handling audit
+Approach: Centralized error middleware, standardized 4xx/5xx responses
+Outcome: SUCCESS | Reduced error ambiguity by 70%
+Reflection: Consistent error format helps client debugging. Include request_id.
+```
+```
+
+### Focused recall (higher limit)
+
+```python
+result = await episodic_search(
+    query="React component performance optimization",
+    limit=10
+)
+```
+
+Use higher limits when:
+- Exploring a new problem space
+- Need multiple solution approaches
+- Researching best practices from past work
+- Building a mental model of related tasks
+
+### No matches
+
+```python
+result = await episodic_search(
+    query="blockchain smart contract security"
+)
+```
+
+**Response:**
+```markdown
+No episodic memories found for: blockchain smart contract security
+```
+
+This means:
+- You haven't stored reflexions about this topic yet
+- Your query is too specific (try broader terms)
+- Vector similarity threshold not met (no relevant past work)
+
+## How Episodic Memory Works
+
+### Storage architecture
+
+```
+~/.midos/memory/episodic/
+├── reflexions.jsonl          # Line-delimited JSON reflexions
+├── embeddings.lance/         # LanceDB vector index
+└── metadata.json             # Schema version, stats
+```
+
+### Reflexion schema
+
+```json
+{
+  "timestamp": "2026-03-05T04:35:21Z",
+  "task_type": "CODE",
+  "input_preview": "Implemented retry logic for API calls",
+  "approach": "Used exponential backoff with max 3 retries",
+  "outcome": "SUCCESS",
+  "reflection": "Exponential backoff prevents API hammering. Add jitter to avoid thundering herd.",
+  "provider": "mcp_server",
+  "session_id": "sess_20260305_043521",
+  "vector": [0.123, -0.456, ...],  // 768-dim embedding
+  "score": null  // Populated during search
+}
+```
+
+### Task types
+
+- **CODE**: Implementation, refactoring, adding features
+- **RESEARCH**: Investigating solutions, reading docs, exploring APIs
+- **DEBUG**: Troubleshooting errors, fixing bugs, diagnosing issues
+- **REVIEW**: Code review, architecture review, audits
+
+### Vector similarity search
+
+1. **Embedding**: Query → 768-dim vector (same model as knowledge base)
+2. **Index**: LanceDB IVF_PQ index for fast approximate search
+3. **Ranking**: Cosine similarity (0-1 score)
+4. **Filtering**: Returns top N with score above threshold (default 0.4)
+
+## Integration with Agent Learning
+
+### Before starting a task
+
+```python
+# Check if you've done this before
+memories = await episodic_search(
+    query="implementing OAuth2 authentication flow",
+    limit=3
+)
+
+# If high-scoring matches found, review approach before starting
+if "Score: 0.8" in memories:
+    # Learn from past experience
+    # Reuse successful patterns
+    # Avoid documented pitfalls
+```
+
+### After completing a task
+
+```python
+# Store the experience for future recall
+await episodic_store(
+    task_type="CODE",
+    input_preview="Implemented OAuth2 with PKCE flow",
+    success=True
+)
+
+# Now searchable for future similar tasks
+```
+
+### Iterative problem solving
+
+```python
+# Attempt 1: Try standard approach
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Memory leak in React useEffect",
+    success=False
+)
+
+# Search for similar failures
+memories = await episodic_search("React useEffect memory leak")
+# Discover: "Always return cleanup function"
+
+# Attempt 2: Apply learned solution
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Memory leak fixed with useEffect cleanup",
+    success=True
+)
+```
+
+### Cross-task pattern recognition
+
+```python
+# After multiple timeout issues
+memories = await episodic_search(
+    query="timeout connection database API",
+    limit=15
+)
+
+# Pattern emerges: Connection pooling solves most timeout issues
+# Store meta-reflexion:
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Timeout pattern analysis: 12/15 cases solved by connection pooling",
+    success=True
+)
+```
+
+## Storage and Retrieval Patterns
+
+### Daily workflow
+
+```python
+# Morning: Review yesterday's learnings
+memories = await episodic_search(
+    query="yesterday's debugging work",
+    limit=10
+)
+
+# During work: Recall similar tasks
+memories = await episodic_search(
+    query="current_task_description",
+    limit=3
+)
+
+# Evening: Store day's reflexions
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Daily summary: Fixed 3 bugs, refactored auth middleware, researched caching",
+    success=True
+)
+```
+
+### Project-specific learning
+
+```python
+# At project start
+memories = await episodic_search(
+    query="FastAPI React PostgreSQL microservices",
+    limit=20
+)
+# Loads all relevant past project experiences
+
+# During project
+await episodic_store(
+    task_type="CODE",
+    input_preview="Set up FastAPI CORS middleware for React frontend",
+    success=True
+)
+
+# At project end
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Project retrospective: Authentication patterns, deployment challenges, performance wins",
+    success=True
+)
+```
+
+### Failure analysis
+
+```python
+# Search for past failures
+memories = await episodic_search(
+    query="failed test deployment error",
+    limit=10
+)
+
+# Analyze patterns:
+# - What approaches failed?
+# - What was learned from each failure?
+# - Were failures followed by successful attempts?
+
+# Store anti-patterns:
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Anti-pattern identified: Hardcoded config causes deployment failures across 5 projects",
+    success=True
+)
+```
+
+## Best Practices
+
+### Query design
+
+**Good queries:**
+- Include domain + task type: `"FastAPI middleware authentication"`
+- Use technical vocabulary: `"PostgreSQL connection pooling"`
+- Describe the problem: `"React re-render performance issue"`
+
+**Bad queries:**
+- Too generic: `"bug"`, `"error"`, `"code"`
+- Too vague: `"that thing I did yesterday"`
+- Wrong granularity: `"fix line 42"` (too specific), `"programming"` (too broad)
+
+### When to search
+
+**Before coding:**
+- New feature similar to past work
+- Bug that feels familiar
+- Design decision you've made before
+
+**During coding:**
+- Stuck on same error seen previously
+- Need to recall successful pattern
+- Want to avoid documented anti-pattern
+
+**After coding:**
+- Reflect on what worked/failed
+- Document new learnings
+- Store successful patterns for future reuse
+
+### Managing memory growth
+
+- **Reflexions never auto-delete** (you control retention)
+- **Vector index rebuilds** happen automatically on size thresholds
+- **Manual cleanup**: Edit `~/.midos/memory/episodic/reflexions.jsonl` to remove entries
+- **Export**: Use `jq` or Python to analyze/backup reflexions
+
+## Error Handling
+
+### Common errors
+
+```python
+# Empty query
+result = await episodic_search(query="")
+# Returns: "Episodic search error: query required"
+
+# Vector store not initialized
+result = await episodic_search(query="test")
+# Returns: "Episodic search error: memory store not initialized"
+
+# Embedding service unavailable
+result = await episodic_search(query="test")
+# Returns: "Episodic search error: embedding generation failed"
+```
+
+### Graceful degradation
+
+If episodic search fails:
+1. Check if `episodic_memory.py` is available (imported from `hooks/`)
+2. Verify `~/.midos/memory/episodic/` directory exists
+3. Test vector store with `memory_stats` tool
+4. Fall back to `search_knowledge` for general queries
+
+## Related Tools
+
+- **[episodic_store](/api/agent/episodic-store)**: Store new reflexions for future recall
+- **[semantic_search](/api/knowledge/semantic-search)**: Search MidOS knowledge base (not your memory)
+- **[memory_stats](/api/system/memory-stats)**: Check vector store health and stats
+- **[agent_handshake](/api/agent/agent-handshake)**: Initial setup (mentions episodic tools)
+
+## Source Code
+
+Implemented in `/modules/mcp_server/midos_mcp.py:508-531`
+
+Uses:
+- `hooks/episodic_memory.py`: `search_reflexions(query, limit)`
+- LanceDB for vector index
+- Same embedding model as semantic search (Gemini or configured alternative)
+
+## Technical Details
+
+### Performance
+
+- **Latency**: 50-200ms for 5-result search (depends on index size)
+- **Throughput**: 100+ queries/sec (vector index is in-memory)
+- **Scalability**: Tested with 10K+ reflexions, sub-second search
+
+### Privacy
+
+- **Storage**: Local only (`~/.midos/memory/episodic/`)
+- **Sharing**: Never sent to MidOS servers
+- **Embedding**: Local or via your API keys (same as semantic search)
+- **Deletion**: Manual (edit reflexions.jsonl, rebuild index)
+
+### Limitations
+
+- **No time filtering**: Can't search "last week only" (add timestamp to query)
+- **No task type filtering**: Can't restrict to "CODE only" (include in query)
+- **No multi-agent**: Each agent has separate episodic memory
+- **No cross-project**: Reflexions aren't tagged by project (add to input_preview)
+
+## Future Enhancements
+
+- **Temporal decay**: Weight recent memories higher
+- **Success filtering**: `only_successful=True` parameter
+- **Task type filtering**: `task_types=["CODE", "DEBUG"]`
+- **Session filtering**: `session_id="sess_20260305"`
+- **Automatic tagging**: Extract entities (files, errors, frameworks) from reflexions
+- **Graph connections**: Link related reflexions ("this led to that")

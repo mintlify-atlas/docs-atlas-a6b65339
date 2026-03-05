@@ -1,0 +1,255 @@
+---
+title: 'get_protocol'
+description: 'Retrieve specific protocol and specification documents'
+icon: 'file-contract'
+---
+
+## Overview
+
+The `get_protocol` tool retrieves protocol documents - formal specifications, standards, and communication protocols used in the MidOS ecosystem. Protocols define how systems, agents, and components interact.
+
+## Function Signature
+
+```python
+async def get_protocol(name: str) -> str
+```
+
+## Parameters
+
+<ParamField path="name" type="string" required>
+  The protocol name to retrieve. Case-insensitive matching is supported.
+  
+  Examples:
+  - `"PROTOCOL_NEURAL_LINK"` - Neural link communication protocol
+  - `"PROTOCOL_AGENT_HANDSHAKE"` - Agent initialization protocol
+  - `"MCP_PROTOCOL_SPEC"` - Model Context Protocol specification
+  - `"A2A_PROTOCOL"` - Agent-to-Agent communication
+</ParamField>
+
+## Return Value
+
+Returns a string containing:
+- **Success**: Full content of the protocol document in Markdown format
+- **Not Found**: Error message indicating the protocol was not found
+
+```
+Protocol not found: {name}
+```
+
+## Behavior
+
+1. **Exact Match**: First attempts to find an exact match for `{name}.md`
+2. **Case-Insensitive Search**: If no exact match, performs case-insensitive search
+3. **Simple Error**: Returns basic error message if protocol doesn't exist
+
+## Protocol Types
+
+### Communication Protocols
+
+Define how systems communicate:
+- Agent-to-Agent (A2A) protocols
+- Model Context Protocol (MCP) specifications
+- Inter-process communication patterns
+- API communication standards
+
+### Behavioral Protocols
+
+Define system behaviors:
+- Agent initialization sequences
+- Handshake procedures
+- State transition rules
+- Error handling protocols
+
+### Data Protocols
+
+Define data formats and structures:
+- Message format specifications
+- Knowledge representation standards
+- Serialization protocols
+- Schema definitions
+
+## Usage Examples
+
+### Get Agent Handshake Protocol
+
+```python
+result = await get_protocol(name="PROTOCOL_AGENT_HANDSHAKE")
+# Returns the agent initialization and handshake specification
+```
+
+### Retrieve Neural Link Protocol
+
+```python
+result = await get_protocol(name="PROTOCOL_NEURAL_LINK")
+# Returns the neural link communication protocol specification
+```
+
+### Get A2A Protocol Spec
+
+```python
+result = await get_protocol(name="A2A_PROTOCOL")
+# Returns Agent-to-Agent communication protocol
+```
+
+### Case-Insensitive Lookup
+
+```python
+# These are equivalent:
+result = await get_protocol(name="protocol_neural_link")
+result = await get_protocol(name="PROTOCOL_NEURAL_LINK")
+result = await get_protocol(name="Protocol_Neural_Link")
+```
+
+### Handle Missing Protocol
+
+```python
+result = await get_protocol(name="NONEXISTENT_PROTOCOL")
+# Returns: "Protocol not found: NONEXISTENT_PROTOCOL"
+```
+
+## Related Knowledge
+
+Protocols are often referenced in:
+
+- **EUREKA documents**: Implementation of protocols in specific contexts
+- **Skills**: Practical usage of protocols in frameworks
+- **Truth patches**: Common protocol misconceptions
+- **Chunks**: Research on protocol standards (MCP, A2A)
+
+### Example: MCP Protocol
+
+The Model Context Protocol appears across knowledge types:
+
+```python
+# Get the formal protocol specification
+protocol = await get_protocol(name="MCP_PROTOCOL_SPEC")
+
+# Get ecosystem updates and corrections
+truth = await get_truth(name="MCP_ECOSYSTEM_UPDATES_2026")
+
+# Search for implementation patterns
+results = await search_knowledge(query="MCP implementation patterns")
+```
+
+## Common Use Cases
+
+### Implementing Agent Systems
+
+```python
+# Get required protocols for agent implementation
+handshake = await get_protocol(name="PROTOCOL_AGENT_HANDSHAKE")
+a2a = await get_protocol(name="A2A_PROTOCOL")
+neural_link = await get_protocol(name="PROTOCOL_NEURAL_LINK")
+```
+
+### Understanding Standards
+
+```python
+# Review protocol specifications before implementation
+mcp_spec = await get_protocol(name="MCP_PROTOCOL_SPEC")
+# Use specification to guide implementation
+```
+
+### Debugging Communication Issues
+
+```python
+# Reference protocol when debugging
+protocol = await get_protocol(name="PROTOCOL_NEURAL_LINK")
+# Verify implementation matches specification
+```
+
+### Building Interoperable Systems
+
+```python
+# Ensure compliance with standard protocols
+a2a_protocol = await get_protocol(name="A2A_PROTOCOL")
+mcp_protocol = await get_protocol(name="MCP_PROTOCOL_SPEC")
+# Build systems that follow established standards
+```
+
+## Protocol Documentation Structure
+
+Most protocols follow this structure:
+
+1. **Overview**: Purpose and scope
+2. **Specification**: Formal protocol definition
+3. **Message Formats**: Data structures and schemas
+4. **Sequences**: Interaction sequences and flows
+5. **Error Handling**: Error codes and recovery
+6. **Examples**: Reference implementations
+7. **Compliance**: Validation and testing
+
+## Integration with Other Tools
+
+### With Search Tools
+
+```python
+# Find protocols related to a topic
+results = await search_knowledge(query="agent communication")
+# Then get specific protocol
+protocol = await get_protocol(name="A2A_PROTOCOL")
+```
+
+### With Skills
+
+```python
+# Get protocol specification
+protocol = await get_protocol(name="MCP_PROTOCOL_SPEC")
+# Get implementation patterns
+skill = await get_skill(name="GOOGLE_ADK_A2A_IDP_MULTIAGENT")
+```
+
+### With EUREKA Documents
+
+```python
+# Get protocol spec
+protocol = await get_protocol(name="A2A_PROTOCOL")
+# Get optimization insights
+eureka = await get_eureka(name="EUREKA_AGENT_ARCHITECTURE_PATTERNS_2026")
+```
+
+## Related Tools
+
+- [`get_skill`](/api/knowledge/get-skill) - Get implementation patterns
+- [`get_eureka`](/api/knowledge/get-eureka) - Get optimization insights
+- [`get_truth`](/api/knowledge/get-truth) - Get protocol misconception corrections
+- [`search_knowledge`](/api/search/search-knowledge) - Search for protocol references
+
+## Protocol vs Other Knowledge Types
+
+| Type | Purpose | Example |
+|------|---------|----------|
+| **Protocol** | Formal specification | MCP message format |
+| **EUREKA** | Proven improvement | Optimized protocol usage |
+| **Skill** | Implementation guide | How to use protocol in React |
+| **Truth Patch** | Misconception fix | Common protocol mistakes |
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Read Before Implementing" icon="book">
+    Always review protocol documentation before implementing protocol-based systems.
+  </Card>
+  
+  <Card title="Validate Compliance" icon="check">
+    Use protocol specifications to validate your implementation matches standards.
+  </Card>
+  
+  <Card title="Reference in Code" icon="code">
+    Link protocol documentation in code comments for maintainability.
+  </Card>
+  
+  <Card title="Update Knowledge" icon="rotate">
+    Check for protocol updates when issues arise or new versions release.
+  </Card>
+</CardGroup>
+
+## Source Location
+
+Protocols directory: `knowledge/protocols/`
+
+Source: `modules/mcp_server/midos_mcp.py:313-330`
+
+<Note>
+  If you're looking for protocol-related research and chunks, use [`search_knowledge`](/api/search/search-knowledge) with queries like "MCP protocol" or "A2A protocol".
+</Note>

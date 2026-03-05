@@ -1,0 +1,531 @@
+---
+title: Authentication
+description: Two-tier API key authentication with rate limiting for MidOS MCP server
+---
+
+MidOS implements a **two-tier authentication system** with API key validation and rate limiting. This page covers the implementation details.
+
+## Overview
+
+The authentication system is implemented as FastMCP middleware in `modules/mcp_server/auth.py`.
+
+**Key features**:
+- **Two-tier access**: Community (free) vs Dev/Pro (API key required)
+- **Rate limiting**: Per-tier query limits (100/mo → 25K/mo → 100K/mo)
+- **API key format**: `midos_sk_` prefix (57 chars total)
+- **Local development bypass**: Localhost gets dev tier without key
+- **Security hardening**: Cloudflare proxy detection, path traversal protection
+
+Reference: `modules/mcp_server/auth.py:1-526`
+
+## Tier System (ACCESS_TIER_DOCTRINE v2.0)
+
+MidOS uses a hierarchical tier system:
+
+```
+community (0) → dev (1) → ops (2) → admin (99)
+```
+
+| Tier | Level | Rate Limit | Tools Available |
+|------|-------|------------|------------------|
+| **community** | 0 | 100 queries/month | 8 basic tools |
+| **dev** | 1 | 25,000 queries/month | All community + 8 advanced tools |
+| **ops** | 2 | 100,000 queries/month | All dev tools |
+| **admin** | 99 | Unlimited | All tools + admin ops |
+
+Reference: `modules/mcp_server/auth.py:4-7` and `31-66`
+
+### Tool Access by Tier
+
+**Community Tier (no API key required)**:
+```python
+COMMUNITY_TOOLS = {
+    "search_knowledge",
+    "list_skills",
+    "hive_status",
+    "project_status",
+    "agent_handshake",
+    "agent_bootstrap",
+    "get_skill",
+    "get_protocol",
+}
+```
+
+**Dev Tier (requires API key)**:
+```python
+DEV_TOOLS = {
+    "get_eureka",
+    "get_truth",
+    "semantic_search",
+    "research_youtube",
+    "chunk_code",
+    "memory_stats",
+    "pool_status",
+    "episodic_search",
+}
+```
+
+**Admin Tier**:
+```python
+ADMIN_TOOLS = {
+    "episodic_store",
+    "pool_signal",
+}
+```
+
+Reference: `modules/mcp_server/auth.py:33-60`
+
+## API Key Format
+
+**Format**: `midos_sk_{48_hex_chars}`
+
+**Example**: `midos_sk_a1b2c3d4e5f6789012345678901234567890abcdef123456`
+
+**Length**: 57 characters total (9 prefix + 48 hex)
+
+**Generation**:
+```python
+import secrets
+
+key = f"midos_sk_{secrets.token_hex(24)}"  # 24 bytes → 48 hex chars
+```
+
+Reference: `modules/mcp_server/auth.py:166-167`
+
+### Key Storage
+
+**Location**: `config/api_keys.json`
+
+**Schema**:
+```json
+{
+  "midos_sk_a1b2c3...": {
+    "name": "my-app",
+    "tier": "dev",
+    "created": "2026-03-05T12:34:56.789Z",
+    "active": true
+  }
+}
+```
+
+Reference: `modules/mcp_server/auth.py:72-155`
+
+## Rate Limiting
+
+### Rate Limits by Tier
+
+```python
+TIER_LIMITS = {
+    "community": {"queries_per_month": 100},
+    "dev":       {"queries_per_month": 25_000},
+    "ops":       {"queries_per_month": 100_000},
+}
+```
+
+Reference: `modules/mcp_server/auth.py:62-66`
+
+### Usage Tracking
+
+**Location**: `config/api_usage.json`
+
+**Schema**:
+```json
+{
+  "midos_sk_a1b2c3...": {
+    "month": "2026-03",
+    "count": 1234
+  },
+  "anon_abc123...": {
+    "month": "2026-03",
+    "count": 45
+  }
+}
+```
+
+**Month format**: `YYYY-MM`
+
+**Auto-reset**: Usage counters reset on new month
+
+Reference: `modules/mcp_server/auth.py:73-136`
+
+### In-Memory Counter with Periodic Flush
+
+To avoid excessive disk I/O, the middleware maintains **in-memory usage counters** and flushes to disk every 30 seconds:
+
+```python
+class ApiKeyMiddleware:
+    def __init__(self):
+        self._usage_mem: dict[str, int] = {}
+        self._usage_month: str = _current_month()
+        self._usage_flush_time: float = time.time()
+    
+    def _check_and_increment(self, identifier: str, tier: str):
+        # Check in-memory counter
+        count = self._usage_mem.get(identifier, 0)
+        if count >= limit:
+            return False, count, limit
+        
+        # Increment in memory
+        self._usage_mem[identifier] = count + 1
+        
+        # Flush to disk every 30 seconds
+        if (time.time() - self._usage_flush_time) > 30:
+            self._flush_usage()
+        
+        return True, count + 1, limit
+```
+
+Reference: `modules/mcp_server/auth.py:234-276`
+
+### Anonymous User Tracking
+
+Unauthenticated users are tracked by **hashed IP address**:
+
+```python
+def _get_anonymous_id(self) -> str:
+    import hashlib
+    try:
+        headers = get_http_headers(include_all=True)
+        ip = headers.get("cf-connecting-ip",
+                         headers.get("x-real-ip", "anonymous"))
+    except Exception:
+        ip = "stdio"
+    return f"anon_{hashlib.sha256(ip.encode()).hexdigest()[:16]}"
+```
+
+Reference: `modules/mcp_server/auth.py:428-437`
+
+## Middleware Implementation
+
+The `ApiKeyMiddleware` class hooks into FastMCP's middleware system:
+
+```python
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+
+class ApiKeyMiddleware(Middleware):
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        """Gate tool execution by tier + rate limit."""
+        tool_name = context.message.name
+        tier, key = self._resolve_tier()
+        
+        # Check tier access
+        if user_level < required_level:
+            raise ToolError(f"'{tool_name}' requires {required_tier} tier")
+        
+        # Check rate limit
+        allowed, count, limit = self._check_and_increment(identifier, tier)
+        if not allowed:
+            raise ToolError(f"Rate limit exceeded: {count}/{limit}")
+        
+        return await call_next(context)
+```
+
+Reference: `modules/mcp_server/auth.py:208-426`
+
+### Server Integration
+
+The middleware is registered when creating the FastMCP server:
+
+```python
+from fastmcp import FastMCP
+from modules.mcp_server.auth import ApiKeyMiddleware
+
+mcp = FastMCP(
+    "midos",
+    instructions="MidOS knowledge library...",
+    middleware=[ApiKeyMiddleware()],
+)
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:211-215`
+
+## Authorization Header
+
+Clients pass API keys via the `Authorization` header:
+
+**Format**: `Bearer midos_sk_{key}`
+
+**Example MCP config**:
+```json
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer midos_sk_a1b2c3d4..."
+      }
+    }
+  }
+}
+```
+
+### Parsing Logic
+
+```python
+def _resolve_tier(self) -> tuple[str, str | None]:
+    headers = get_http_headers(include_all=True)
+    auth_header = headers.get("authorization", "")
+    
+    if not auth_header:
+        return "community", None
+    
+    # Expect "Bearer midos_sk_..."
+    parts = auth_header.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return "invalid", None
+    
+    token = parts[1].strip()
+    if not token.startswith("midos_sk_"):
+        return "invalid", token
+    
+    # Validate against stored keys
+    keys = self._get_keys()
+    key_info = keys.get(token)
+    
+    if not key_info or not key_info.get("active", False):
+        return "invalid", token
+    
+    return key_info.get("tier", "pro"), token
+```
+
+Reference: `modules/mcp_server/auth.py:324-375`
+
+## Security Features
+
+### 1. Localhost Bypass (Development)
+
+Requests from localhost get **dev tier without API key** for local development:
+
+```python
+def _is_localhost(self) -> bool:
+    """Check if request originates from localhost.
+    
+    Only trusts X-Forwarded-For when request comes through Cloudflare.
+    """
+    headers = get_http_headers(include_all=True)
+    local_addrs = {"127.0.0.1", "::1", "localhost"}
+    
+    # Trust X-Forwarded-For ONLY if CF-Connecting-IP is present
+    cf_ip = headers.get("cf-connecting-ip", "")
+    if cf_ip:
+        forwarded = headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if forwarded in local_addrs:
+            return True
+    
+    # Direct connection: check host header
+    host = headers.get("host", "").split(":")[0]
+    return host in local_addrs
+```
+
+Reference: `modules/mcp_server/auth.py:290-322`
+
+### 2. Cloudflare Proxy Detection
+
+X-Forwarded-For header is **only trusted when request comes through Cloudflare** (verified via `CF-Connecting-IP` header). This prevents IP spoofing.
+
+**Trusted Cloudflare IP ranges**:
+```python
+_TRUSTED_PROXIES = {
+    "173.245.48.", "103.21.244.", "103.22.200.", "103.31.4.",
+    "141.101.64.", "108.162.192.", "190.93.240.", "188.114.96.",
+    # ... more ranges
+    "172.64.", "131.0.72.",
+}
+```
+
+Reference: `modules/mcp_server/auth.py:279-288`
+
+### 3. Token Length Validation
+
+To prevent DoS attacks, tokens are **length-bounded** (max 128 chars, valid keys are 57 chars):
+
+```python
+if len(token) > 128:
+    return "invalid", token[:20]
+```
+
+Reference: `modules/mcp_server/auth.py:365-367`
+
+### 4. Path Traversal Protection (Resources)
+
+MCP resources include strict validation:
+
+```python
+import re
+
+# Strip dangerous characters
+safe_name = re.sub(r"[^\w\-]", "", skill_name)
+if not safe_name or safe_name != skill_name:
+    return f"Invalid skill name: {skill_name}"
+
+# Verify resolved path is inside SKILLS_DIR
+resolved = skill_path.resolve()
+if not resolved.is_relative_to(SKILLS_DIR.resolve()):
+    return "Access denied: path traversal detected"
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:803-821`
+
+### 5. Stdio Tier Override (Trusted Setups)
+
+For local stdio connections (no HTTP headers), tier can be set via environment variable:
+
+```bash
+export MIDOS_STDIO_TIER=dev
+python -m modules.mcp_server.midos_mcp
+```
+
+**Default**: `community`
+
+Reference: `modules/mcp_server/auth.py:342-346`
+
+## Key Management CLI
+
+MidOS includes a CLI for managing API keys:
+
+### Generate Key
+
+```bash
+python -m modules.mcp_server.auth generate \
+  --name "my-app" \
+  --tier dev
+
+# Output:
+# Generated dev key for 'my-app':
+#   midos_sk_a1b2c3d4e5f6789012345678901234567890abcdef123456
+#   Store this securely — it won't be shown again in full.
+```
+
+### List Keys
+
+```bash
+python -m modules.mcp_server.auth list
+
+# Output:
+# Prefix                 Name                 Tier     Active   Created
+# ------------------------------------------------------------------------
+# midos_sk_a1b2c3...    my-app               dev      yes      2026-03-05
+# midos_sk_xyz789...    production           ops      yes      2026-02-20
+```
+
+### Revoke Key
+
+```bash
+python -m modules.mcp_server.auth revoke \
+  --key midos_sk_a1b2c3d4e5f6789012345678901234567890abcdef123456
+
+# Output:
+# Key revoked: midos_sk_a1b2c3...
+```
+
+### View Usage Stats
+
+```bash
+python -m modules.mcp_server.auth usage
+
+# Output:
+# Usage for 2026-03:
+# Identifier             Queries
+# -----------------------------------
+# midos_sk_a1b2c3...     1234
+# anon_abc123...         45
+```
+
+Reference: `modules/mcp_server/auth.py:460-522`
+
+## Getting API Keys
+
+Users can get API keys at **[midos.dev/pricing](https://midos.dev/pricing)**.
+
+**Tiers available**:
+- **Community** (free): 100 queries/month, 8 basic tools
+- **Dev** ($20/mo): 25K queries/month, all tools except admin
+- **Pro** ($50/mo): 100K queries/month, priority support
+
+Reference: `modules/mcp_server/auth.py:390` and `413`
+
+## Error Messages
+
+### Invalid API Key
+
+```
+ToolError: Invalid or revoked API key. Get a key at https://midos.dev/keys
+```
+
+### Insufficient Tier
+
+```
+ToolError: 'semantic_search' requires dev tier or higher. Current tier: community.
+Community tools: get_protocol, get_skill, hive_status, list_skills, project_status, search_knowledge, agent_bootstrap, agent_handshake.
+Upgrade at https://midos.dev/pricing
+```
+
+### Rate Limit Exceeded
+
+```
+ToolError: Rate limit exceeded: 100/100 queries this month.
+Upgrade your tier at https://midos.dev/pricing
+```
+
+Reference: `modules/mcp_server/auth.py:387-424`
+
+## Resource Tier Gating
+
+MCP resources also respect tier limits. Community tier gets **400-character preview** of skill content:
+
+```python
+if not has_valid_key:
+    # Truncate for community tier
+    preview_limit = 400
+    if len(content) > preview_limit:
+        truncated = content[:preview_limit].rsplit("\n", 1)[0]
+        content = (
+            f"{truncated}\n\n"
+            f"---\n"
+            f"> Full skill content available with MidOS Pro.\n"
+            f"> Get your API key at https://midos.dev/pricing"
+        )
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:834-844`
+
+## Usage Example
+
+### Claude Code (.mcp.json)
+
+```json
+{
+  "mcpServers": {
+    "midos": {
+      "url": "https://mcp.midos.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer midos_sk_your_key_here"
+      }
+    }
+  }
+}
+```
+
+### Cursor / Windsurf (MCP Settings)
+
+- **Name**: `midos`
+- **URL**: `https://mcp.midos.dev/mcp`
+- **Transport**: Streamable HTTP
+- **Headers**:
+  - `Authorization`: `Bearer midos_sk_your_key_here`
+
+### Self-Hosted (Local)
+
+No API key needed for localhost:
+
+```bash
+python -m modules.mcp_server.midos_mcp --http --port 8419
+```
+
+Connect to `http://localhost:8419/mcp` (auto dev tier).
+
+## Next Steps
+
+- [System Overview](/architecture/overview) - High-level architecture
+- [Vector Store](/architecture/vector-store) - Search implementation
+- [Knowledge Layers](/architecture/knowledge-layers) - Content organization

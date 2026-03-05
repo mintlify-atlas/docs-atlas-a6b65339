@@ -1,0 +1,682 @@
+---
+title: "Agent Handshake"
+description: "Personalize MidOS for your model, client, and technology stack"
+---
+
+The `agent_handshake` tool tailors MidOS to your specific environment. Call it first when connecting to get optimized tool recommendations, skill matches, and context-aware configurations.
+
+## Why Personalization Matters
+
+MidOS serves diverse agents with different capabilities:
+- **Models** vary in context windows (8K–2M tokens), tool support, and speed
+- **Clients** have different features (hooks, memory, background agents)
+- **Stacks** determine which skills and knowledge are relevant
+
+Without personalization:
+- ❌ Generic results with low relevance
+- ❌ Irrelevant tools and skills shown
+- ❌ No context budget optimization
+- ❌ Missing model-specific tips
+
+With personalization:
+- ✅ Stack-filtered skills ranked by relevance
+- ✅ Tools sorted by your use case
+- ✅ Context budget matched to your window
+- ✅ Guardrails adapted to your client's capabilities
+
+## Quick Start
+
+### Basic Handshake
+
+Minimal information for quick setup:
+
+```python
+agent_handshake(
+    model="claude-opus-4-6",
+    client="claude-code"
+)
+```
+
+### Full Handshake
+
+Maximum personalization:
+
+```python
+agent_handshake(
+    model="claude-opus-4-6",
+    context_window=200000,
+    client="claude-code",
+    languages="python,typescript",
+    frameworks="fastapi,react,postgresql",
+    platform="macos",
+    project_goal="building a SaaS analytics dashboard"
+)
+```
+
+## Parameters Explained
+
+### model (string)
+
+Your AI model identifier. Used to:
+- Detect context window
+- Identify capabilities (tools, vision, structured output)
+- Load model-specific tips and guardrails
+
+**Supported model formats:**
+
+<CodeGroup>
+```python Claude models
+# Full ID
+model="claude-opus-4-6"
+model="claude-sonnet-4"
+model="claude-3.5-sonnet"
+
+# Short name (auto-resolved)
+model="opus"
+model="sonnet"
+```
+
+```python OpenAI models
+model="gpt-4-turbo"
+model="gpt-4o"
+model="o1"
+model="o3-mini"
+```
+
+```python Google models
+model="gemini-2.5-pro"
+model="gemini-2.5-flash"
+model="gemini-1.5-pro"
+```
+
+```python Open source
+model="llama-3.3-70b"
+model="qwen-2.5-72b"
+model="deepseek-v3"
+```
+</CodeGroup>
+
+**What happens:**
+1. MidOS looks up model in catalog (150+ models)
+2. Resolves context window, max output, capabilities
+3. Assigns tier (small/medium/large context)
+4. Loads model-specific tips
+
+**If model not found:**
+- Defaults to 128K context window
+- Assumes tool support enabled
+- Uses generic tips
+
+### context_window (integer)
+
+Explicit context window in tokens. Optional if model is recognized.
+
+```python
+# Auto-detect from model
+model="claude-opus-4-6"  # → 200,000 tokens
+
+# Override auto-detection
+model="custom-model",
+context_window=50000
+
+# Unknown model with explicit window
+model="my-fine-tuned-llama",
+context_window=32000
+```
+
+**Used for:**
+- Determining payload tier (small/medium/large)
+- Truncating handshake response
+- Recommending chunk vs full skill retrieval
+
+**Tiers:**
+- **Small** (up to 32K): Compact responses, keyword search preferred
+- **Medium** (32K to 128K): Standard responses, balanced search
+- **Large** (over 128K): Full responses with previews, semantic search preferred
+
+### client (string)
+
+Your AI coding tool. Used to:
+- Detect client capabilities (hooks, memory, agents)
+- Load client-specific instructions
+- Apply tool restrictions
+- Suggest delegation strategies
+
+**Supported clients:**
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```python
+    client="claude-code"  # or "claude_code"
+    ```
+    
+    **Features:**
+    - ✅ Hooks (lifecycle management)
+    - ✅ Memory (cross-session)
+    - ✅ Background agents (parallel tasks)
+    - ✅ HTTP + stdio transport
+  </Tab>
+  
+  <Tab title="Cursor">
+    ```python
+    client="cursor"
+    ```
+    
+    **Features:**
+    - ❌ Hooks
+    - ✅ Memory (limited)
+    - ❌ Background agents
+    - ✅ HTTP transport
+  </Tab>
+  
+  <Tab title="Windsurf">
+    ```python
+    client="windsurf"
+    ```
+    
+    **Features:**
+    - ✅ Hooks (Cascade lifecycle)
+    - ✅ Memory
+    - ✅ Background agents
+    - ✅ HTTP transport
+  </Tab>
+  
+  <Tab title="Cline">
+    ```python
+    client="cline"
+    ```
+    
+    **Features:**
+    - ❌ Hooks
+    - ❌ Memory
+    - ❌ Background agents
+    - ✅ HTTP transport
+  </Tab>
+</Tabs>
+
+### languages (comma-separated string)
+
+Programming languages you're using. Affects:
+- Skill ranking and filtering
+- Knowledge chunk relevance
+- Example code snippets shown
+
+```python
+languages="python,typescript,rust"
+```
+
+**Canonical names:**
+- `python`, `typescript`, `javascript`, `rust`, `go`
+- `java`, `kotlin`, `swift`, `csharp`, `php`
+- `ruby`, `elixir`, `haskell`, `scala`
+
+<Tip>
+Use full names, not abbreviations: `typescript` not `ts`, `javascript` not `js`.
+</Tip>
+
+### frameworks (comma-separated string)
+
+Frameworks and libraries you're using. Combined with `languages` for precise skill matching.
+
+```python
+frameworks="fastapi,react,nextjs,postgresql,redis"
+```
+
+**Examples by category:**
+
+<AccordionGroup>
+  <Accordion title="Frontend Frameworks">
+    - `react`, `nextjs`, `vue`, `nuxt`, `svelte`, `sveltekit`
+    - `angular`, `solid`, `qwik`, `astro`, `remix`
+  </Accordion>
+  
+  <Accordion title="Backend Frameworks">
+    - `fastapi`, `django`, `flask`, `nestjs`, `express`
+    - `springboot`, `laravel`, `symfony`, `rails`
+  </Accordion>
+  
+  <Accordion title="Databases">
+    - `postgresql`, `mysql`, `mongodb`, `redis`, `elasticsearch`
+    - `lancedb`, `chromadb`, `pinecone`, `dynamodb`
+  </Accordion>
+  
+  <Accordion title="ORMs">
+    - `prisma`, `drizzle`, `typeorm`, `sequelize`, `sqlalchemy`
+  </Accordion>
+  
+  <Accordion title="DevOps">
+    - `docker`, `kubernetes`, `terraform`, `ansible`
+    - `github-actions`, `gitlab-ci`, `jenkins`
+  </Accordion>
+</AccordionGroup>
+
+### platform (string)
+
+Your operating system. Used for:
+- Platform-specific guardrails (Windows PowerShell, macOS paths)
+- File path conventions
+- Installation instructions
+
+```python
+platform="macos"   # or "linux", "windows"
+```
+
+### project_goal (string)
+
+What you're building. Used for:
+- Finding relevant knowledge chunks
+- Prioritizing skills
+- Generating proactive suggestions
+
+```python
+project_goal="building a real-time collaborative code editor"
+```
+
+**Good goals:**
+- "building a SaaS analytics dashboard with real-time updates"
+- "implementing event sourcing for an e-commerce platform"
+- "creating a CLI tool for database migrations"
+
+**Avoid generic goals:**
+- ❌ "learning React" (too vague)
+- ❌ "testing" (no context)
+- ❌ "API" (be specific)
+
+## Handshake Response
+
+### Structure
+
+The handshake returns markdown with:
+
+```markdown
+# MidOS Agent Handshake
+
+## Getting Started (3 steps)
+1. semantic_search('your topic')
+2. list_skills(stack='python,react')
+3. hybrid_search('specific question')
+
+## Top Tools (5)
+| Tool | Use for | Tier |
+|------|---------|------|
+| semantic_search | Vector search with Gemini embeddings | DEV |
+| ...
+
+## Identity
+MidOS — MCP Community Library
+
+## Model Info
+Model: claude-opus-4-6 | Context: 200,000 | Code: 9/10
+
+## Client Info
+Client: claude-code | MCP: streamable-http | Features: hooks, memory, bg-agents
+
+## Context Budget
+200,000 tokens | tier: large
+
+## CLI Profile: Claude Code (role: primary)
+- You have access to hooks — use them for guardrails
+- Memory persistence enabled — store learnings
+- Background agents available — delegate complex tasks
+
+## Relevant Skills (15)
+- **react_19_comprehensive** — Match with stack: react, typescript
+- **fastapi_patterns** — Match with stack: python, fastapi
+- **postgresql_performance** — Match with stack: postgresql
+...
+
+## Guardrails (8)
+- Never hardcode secrets -- use os.getenv() + .env
+- Check indices before creating new ones
+- Windows/PowerShell: use ';' not '&&'
+...
+
+## Tips (7)
+- Use semantic_search for concepts, search_knowledge for exact terms
+- Enable reranking for critical queries: hybrid_search(q, rerank=True)
+- Stack filtering improves relevance: semantic_search(q, stack="python")
+...
+
+## Suggestions (3)
+- MidOS has a skill for react: run get_skill('react_19_comprehensive')
+- Free tier: 17 tools, 500 queries/mo — no API key needed
+- Help improve MidOS: run auditions from sandbox/auditions/
+```
+
+### Compact Mode (Small Context)
+
+For models with up to 32K context:
+
+```markdown
+# MidOS Agent Handshake
+
+## Getting Started (3 steps)
+...
+
+## Top Tools (5)
+...
+
+**Model:** claude-sonnet-3.5 | Context: 32,000 | Code: 8/10
+**Client:** cursor | MCP: streamable-http
+**Context:** 32,000 tokens | tier: small
+
+## CLI Profile: Cursor (role: code-editor)
+- No hooks — use CLAUDE.md for persistent rules
+- Limited memory — store context in files
+
+## Relevant Skills (2)
+- **react_19_comprehensive**
+- **typescript_mastery**
+
+## Guardrails (3)
+- Never hardcode secrets
+- Prefer search_knowledge over semantic_search (lower token cost)
+- Keep tool responses concise
+
+## Tips (2)
+- Use compact search: search_knowledge("exact term")
+- Request summaries, not full docs
+```
+
+## Use Cases
+
+### First-Time Connection
+
+```python
+# Onboard to MidOS with full context
+agent_handshake(
+    model="claude-opus-4-6",
+    client="claude-code",
+    languages="python,typescript",
+    frameworks="fastapi,nextjs,postgresql",
+    project_goal="building a task management SaaS"
+)
+```
+
+**What you get:**
+- Personalized tool list (semantic_search, get_skill, etc.)
+- 15 relevant skills (fastapi_patterns, nextjs_16, postgresql_performance)
+- Stack-specific tips
+- Client capability awareness
+
+### Switching Stacks
+
+```python
+# You were doing frontend, now doing backend
+agent_handshake(
+    model="claude-opus-4-6",
+    client="claude-code",
+    languages="python",
+    frameworks="django,postgresql,celery",
+    project_goal="building a background job processing system"
+)
+```
+
+**New recommendations:**
+- django_v5 skill
+- postgresql_performance skill
+- celery_task_patterns skill
+- Background job tips
+
+### Unknown Model
+
+```python
+# Using a custom or fine-tuned model
+agent_handshake(
+    model="my-custom-llama-3.3-70b",
+    context_window=65000,
+    client="cursor",
+    languages="rust,typescript",
+    frameworks="actix-web,svelte"
+)
+```
+
+**Fallback behavior:**
+- Uses provided context_window
+- Assumes tool support
+- Generic model tips
+- Stack-based skill matching still works
+
+## Model Detection
+
+MidOS recognizes 150+ models:
+
+### Claude Family
+
+```python
+# Full IDs
+"claude-opus-4-6"       → 200K context
+"claude-sonnet-4"       → 200K context
+"claude-3.5-sonnet"     → 200K context
+
+# Short names (auto-expanded)
+"opus"                  → claude-opus-4-6
+"sonnet"                → claude-sonnet-4
+```
+
+### OpenAI Family
+
+```python
+"gpt-4-turbo"           → 128K context
+"gpt-4o"                → 128K context
+"o1"                    → 200K context
+"o3-mini"               → 200K context
+```
+
+### Google Family
+
+```python
+"gemini-2.5-pro"        → 2M context
+"gemini-2.5-flash"      → 1M context
+"gemini-1.5-pro"        → 2M context
+```
+
+### Open Source
+
+```python
+"llama-3.3-70b"         → 128K context
+"qwen-2.5-72b"          → 128K context
+"deepseek-v3"           → 64K context
+```
+
+<Tip>
+Model catalog: `~/workspace/source/modules/mcp_server/agent_profiles.py:53`
+</Tip>
+
+## Context Window Optimization
+
+### How It Works
+
+1. **Resolve window**: From model catalog or explicit parameter
+2. **Determine tier**: small (up to 32K), medium (32K–128K), large (over 128K)
+3. **Truncate response**: Based on tier
+   - Small: 2 skills, 3 guardrails, 2 tips
+   - Medium: 5 skills, 5 guardrails, 5 tips
+   - Large: 15 skills, full guardrails, full tips
+4. **Recommend tools**: Prefer keyword search for small context
+
+### Example Tiering
+
+<Tabs>
+  <Tab title="Small (32K)">
+    ```python
+    model="claude-3-haiku"  # 32K context
+    ```
+    
+    **Optimizations:**
+    - Compact markdown (bullet points only)
+    - Top 2 skills shown
+    - search_knowledge preferred over semantic_search
+    - No chunk previews
+  </Tab>
+  
+  <Tab title="Medium (128K)">
+    ```python
+    model="gpt-4-turbo"  # 128K context
+    ```
+    
+    **Optimizations:**
+    - Standard markdown format
+    - Top 5 skills shown
+    - Balanced search recommendations
+    - Brief chunk previews (50 chars)
+  </Tab>
+  
+  <Tab title="Large (200K+)">
+    ```python
+    model="claude-opus-4-6"  # 200K context
+    ```
+    
+    **Optimizations:**
+    - Full response with all sections
+    - Top 15 skills shown
+    - semantic_search preferred
+    - Full chunk previews (200 chars)
+  </Tab>
+</Tabs>
+
+## Stack-Aware Recommendations
+
+### Skill Ranking
+
+Skills are scored by:
+
+1. **Model recommendations** (score: 10): Skills explicitly recommended for your model
+2. **Compatibility match** (score: 3 per match): `compatibility.json` languages/frameworks match
+3. **Name match** (score: 1 per match): Skill name contains stack keyword
+
+```python
+# Example scoring for: languages="python", frameworks="fastapi"
+fastapi_patterns:         score = 6  (2 name matches: "fastapi" + "python")
+django_v5:                score = 3  (compatibility: python)
+react_19_comprehensive:   score = 0  (no match)
+```
+
+### Tool Filtering
+
+CLI profiles restrict tools by capability:
+
+```json cli_profile.json (excerpt)
+{
+  "cursor": {
+    "tool_restrictions": {
+      "mode": "allowlist",
+      "denied": ["pool_signal", "pool_status"],
+      "explanation": "Cursor doesn't support background agents"
+    }
+  }
+}
+```
+
+Handshake won't recommend `pool_signal` if you're using Cursor.
+
+## Guardrails Adaptation
+
+Guardrails change based on:
+
+### Universal (Always Applied)
+
+- Never hardcode secrets — use `os.getenv()` + `.env`
+- Check indices before creating new ones
+- Windows: use `;` not `&&` for command chaining
+- Polling: max 10s between checks
+- No duplication: synthesize, never scatter
+
+### Model-Specific
+
+**Small context models:**
+- Keep tool calls concise
+- Prefer search_knowledge over semantic_search
+- Request summaries instead of full documents
+
+**Models without tool support:**
+- Use structured prompts instead of tool calls
+- Request information in batch
+
+### Client-Specific
+
+**No hooks (Cursor, Cline):**
+- Implement guardrails in prompts
+- Use CLAUDE.md or project rules
+
+**No memory (Cline):**
+- Store context in project files
+- Use episodic_store for key findings
+
+**No background agents (Cursor, Cline):**
+- Run tasks sequentially
+- Batch operations to reduce round-trips
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Handshake returns generic config">
+    **Cause**: Model or client not recognized.
+    
+    **Fix**: Use canonical names.
+    
+    ```python
+    # Wrong
+    model="claude opus", client="cc"
+    
+    # Correct
+    model="claude-opus-4-6", client="claude-code"
+    ```
+  </Accordion>
+  
+  <Accordion title="No skills recommended">
+    **Cause**: Stack keywords not matching catalog.
+    
+    **Fix**: Use full framework names.
+    
+    ```python
+    # Wrong
+    frameworks="js,pg,k8s"
+    
+    # Correct
+    frameworks="javascript,postgresql,kubernetes"
+    ```
+  </Accordion>
+  
+  <Accordion title="Wrong context tier applied">
+    **Cause**: Model catalog outdated or unknown model.
+    
+    **Fix**: Explicitly set context_window.
+    
+    ```python
+    model="my-model",
+    context_window=100000  # Force medium tier
+    ```
+  </Accordion>
+  
+  <Accordion title="Irrelevant tools shown">
+    **Cause**: project_goal too generic or missing.
+    
+    **Fix**: Provide specific project description.
+    
+    ```python
+    # Wrong
+    project_goal="API"
+    
+    # Correct
+    project_goal="building a GraphQL API for real-time chat with WebSockets"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Search Strategies" icon="magnifying-glass" href="/guides/search-strategies">
+    Use your personalized config to search effectively
+  </Card>
+  <Card title="Using Skills" icon="graduation-cap" href="/guides/using-skills">
+    Browse the recommended skills from your handshake
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/agent/agent-handshake">
+    Full API documentation for agent_handshake
+  </Card>
+  <Card title="Self-Hosting" icon="server" href="/guides/self-hosting">
+    Deploy MidOS with custom CLI profiles
+  </Card>
+</CardGroup>

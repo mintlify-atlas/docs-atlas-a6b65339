@@ -1,0 +1,223 @@
+---
+title: 'get_truth'
+description: 'Retrieve verified corrections to common AI/development misconceptions'
+icon: 'shield-check'
+---
+
+## Overview
+
+The `get_truth` tool retrieves truth patch documents - verified corrections to common misconceptions in AI development, agent systems, and software engineering. Truth patches help avoid pitfalls and anti-patterns.
+
+<Note>
+  Full content of truth patches requires a **MidOS PRO API key**. Get your key at [midos.dev/pricing](https://midos.dev/pricing)
+</Note>
+
+## Function Signature
+
+```python
+async def get_truth(name: str) -> str
+```
+
+## Parameters
+
+<ParamField path="name" type="string" required>
+  The truth patch name to retrieve. Case-insensitive matching is supported.
+  
+  Examples:
+  - `"AGENT_MITIGATIONS_CONTEXT_OVERFLOW"` - Context overflow mitigation
+  - `"AGENT_MITIGATIONS_FABRICATION"` - Hallucination prevention
+  - `"TRUTH_LLM_PLANNING_LIMITATION"` - LLM planning limitations
+  - `"MCP_ECOSYSTEM_UPDATES_2026"` - MCP ecosystem status
+</ParamField>
+
+## Return Value
+
+Returns a string containing:
+- **Success**: Full content of the truth patch document in Markdown format
+- **Not Found**: Error message with list of available truth patches (up to 20)
+
+```
+Truth patch not found: {name}
+
+Available truth patches: ['AGENT_MITIGATIONS_CONTEXT_OVERFLOW', ...]
+```
+
+## Behavior
+
+1. **Exact Match**: First attempts to find an exact match for `{name}.md`
+2. **Case-Insensitive Search**: If no exact match, performs case-insensitive search
+3. **Error with Suggestions**: Returns helpful error with available patch names
+4. **Authentication**: Requires valid MidOS PRO API key for full content
+
+## Truth Patch Categories
+
+### Agent Mitigations
+
+Corrections for common agent system issues:
+
+- `AGENT_MITIGATIONS_CONTEXT_OVERFLOW` - Handling context window limits
+- `AGENT_MITIGATIONS_FABRICATION` - Preventing hallucinations
+- `AGENT_MITIGATIONS_MEMORY_POISONING` - Protecting agent memory
+- `AGENT_MITIGATIONS_RATE_LIMITS` - Managing API rate limits
+- `AGENT_MITIGATIONS_TOOL_LOOPS` - Breaking infinite tool loops
+
+### System Architecture
+
+- `TRUTH_AGENT_AUTH_NOT_HUMAN_AUTH` - Agent vs human authentication
+- `ACCESS_TIER_DOCTRINE` - Access tier architecture
+- `PROMOTION_GATE_REFERENCE` - Knowledge promotion gates
+
+### Development Practices
+
+- `TRUTH_LLM_PLANNING_LIMITATION` - LLM planning capabilities
+- `MCP_ECOSYSTEM_UPDATES_2026` - MCP protocol updates
+- `MCP_GITHUB_REPOS_REFERENCE_2026` - MCP repository reference
+
+### Knowledge Pipeline
+
+- `knowledge_pipeline_fsm` - Finite state machine patterns
+- `knowledge_pipeline_nfa` - Non-deterministic automata
+- `RESEARCH_PRIORITY_SCORE` - Research prioritization
+
+### Tooling & Analysis
+
+- `video_audio_analysis_tooling` - Video/audio processing tools
+- `INCIDENT_RESPONSE_INDEX` - Incident response procedures
+
+## Usage Examples
+
+### Get Context Overflow Mitigation
+
+```python
+result = await get_truth(name="AGENT_MITIGATIONS_CONTEXT_OVERFLOW")
+# Returns strategies for handling context window limits
+```
+
+### Understand LLM Planning Limits
+
+```python
+result = await get_truth(name="TRUTH_LLM_PLANNING_LIMITATION")
+# Returns verified information about LLM planning capabilities
+```
+
+### Check Agent Authentication Patterns
+
+```python
+result = await get_truth(name="TRUTH_AGENT_AUTH_NOT_HUMAN_AUTH")
+# Returns clarification on agent vs human authentication
+```
+
+### Get MCP Ecosystem Updates
+
+```python
+result = await get_truth(name="MCP_ECOSYSTEM_UPDATES_2026")
+# Returns latest MCP protocol and ecosystem status
+```
+
+### Prevent Tool Loops
+
+```python
+result = await get_truth(name="AGENT_MITIGATIONS_TOOL_LOOPS")
+# Returns patterns to break infinite tool execution loops
+```
+
+### Case-Insensitive Lookup
+
+```python
+# These are equivalent:
+result = await get_truth(name="agent_mitigations_fabrication")
+result = await get_truth(name="AGENT_MITIGATIONS_FABRICATION")
+result = await get_truth(name="Agent_Mitigations_Fabrication")
+```
+
+## Available Truth Patches
+
+<Info>
+  Total: **16 truth patches** covering agent systems, architecture, and development practices
+</Info>
+
+### Complete List
+
+1. `ACCESS_TIER_DOCTRINE`
+2. `AGENT_MITIGATIONS_CONTEXT_OVERFLOW`
+3. `AGENT_MITIGATIONS_FABRICATION`
+4. `AGENT_MITIGATIONS_MEMORY_POISONING`
+5. `AGENT_MITIGATIONS_RATE_LIMITS`
+6. `AGENT_MITIGATIONS_TOOL_LOOPS`
+7. `INCIDENT_RESPONSE_INDEX`
+8. `MCP_ECOSYSTEM_UPDATES_2026`
+9. `MCP_GITHUB_REPOS_REFERENCE_2026`
+10. `PROMOTION_GATE_REFERENCE`
+11. `RESEARCH_PRIORITY_SCORE`
+12. `TRUTH_AGENT_AUTH_NOT_HUMAN_AUTH`
+13. `TRUTH_LLM_PLANNING_LIMITATION`
+14. `knowledge_pipeline_fsm`
+15. `knowledge_pipeline_nfa`
+16. `video_audio_analysis_tooling`
+
+## When to Use Truth Patches
+
+<AccordionGroup>
+  <Accordion title="Building Agent Systems">
+    Use agent mitigation patches to prevent common issues:
+    - Context overflow
+    - Hallucinations
+    - Tool loops
+    - Memory poisoning
+  </Accordion>
+  
+  <Accordion title="Designing Architecture">
+    Reference architecture truth patches:
+    - Access tier design
+    - Authentication patterns
+    - Knowledge promotion gates
+  </Accordion>
+  
+  <Accordion title="Debugging Issues">
+    Check relevant truth patches when encountering:
+    - Rate limit errors
+    - Context window errors
+    - Unexpected agent behavior
+    - Memory inconsistencies
+  </Accordion>
+  
+  <Accordion title="Learning Best Practices">
+    Review truth patches to understand:
+    - LLM limitations
+    - MCP protocol patterns
+    - Incident response procedures
+  </Accordion>
+</AccordionGroup>
+
+## Truth Patches vs Other Knowledge
+
+| Type | Purpose | Example |
+|------|---------|----------|
+| **Truth Patch** | Corrects misconceptions | Agent auth ≠ human auth |
+| **EUREKA** | Proven improvements | 70% token optimization |
+| **Skill** | Technology patterns | React best practices |
+| **Protocol** | Standards/specs | MCP protocol spec |
+
+## Related Tools
+
+- [`get_eureka`](/api/knowledge/get-eureka) - Get validated breakthrough documents
+- [`get_protocol`](/api/knowledge/get-protocol) - Get protocol specifications
+- [`get_skill`](/api/knowledge/get-skill) - Get technology skill documents
+- [`search_knowledge`](/api/search/search-knowledge) - Search across all knowledge
+
+## Access Requirements
+
+<Card title="MidOS PRO Required" icon="lock" color="#8b5cf6">
+  Truth patches are part of the MidOS PRO Knowledge Library.
+  
+  **To access full content**:
+  1. Get your API key at [midos.dev/pricing](https://midos.dev/pricing)
+  2. Configure authentication in your MCP client
+  3. Use `get_truth` with authenticated requests
+</Card>
+
+## Source Location
+
+Truth patches directory: `knowledge/truth/`
+
+Source: `modules/mcp_server/midos_mcp.py:354-372`

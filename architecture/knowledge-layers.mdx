@@ -1,0 +1,348 @@
+---
+title: Knowledge Layers
+description: MidOS 5-layer knowledge pipeline - from raw chunks to state-of-the-art patterns
+---
+
+MidOS uses a **5-layer quality pipeline** to ensure all knowledge is curated, validated, and actionable. Content is promoted through layers as it gains evidence and validation.
+
+## The 5-Layer Pipeline
+
+```
+staging/ → chunks/ → skills/ → truth/ → EUREKA/ → SOTA/
+ (entry)    (L1)      (L2)      (L3)     (L4)      (L5)
+
+ Quality increases ─────────────────────────────────────►
+ Volume decreases  ─────────────────────────────────────►
+```
+
+| Layer | Name | Count | Quality Level | Purpose |
+|-------|------|-------|---------------|----------|
+| **L1** | chunks | 88 files | Curated | Indexed knowledge across 20+ stacks |
+| **L2** | skills | 78 dirs | Organized | Actionable, versioned patterns by stack |
+| **L3** | truth | 2 files (50 total) | Verified | Empirically validated with evidence |
+| **L4** | EUREKA | 2 files (383 total) | Validated | Breakthrough improvements with measured ROI |
+| **L5** | SOTA | 140 items | Best-in-class | Currently unimprovable state-of-the-art |
+
+## Layer 1: Chunks (Curated Knowledge)
+
+**Location**: `knowledge/chunks/`
+
+**Purpose**: Raw but curated knowledge files indexed for search.
+
+**Characteristics**:
+- Human-reviewed content across 20+ tech stacks
+- Markdown format for easy indexing
+- Cross-referenced and myth-busted
+- Updated regularly as frameworks evolve
+
+**Examples**:
+- `astro4_harvest_2026-02-10.md` - Astro 4 patterns
+- `MCP_SECURITY_THREAT_MODEL_2026.md` - MCP security analysis
+- `agentic_chunking_patterns_2026-02-10.md` - Code chunking strategies
+- `ai_coding_tools_comparison_2026.md` - AI tool landscape
+
+**Access**:
+```python
+# Via search_knowledge tool
+search_knowledge("FastAPI dependency injection")
+# Returns: Matching chunks with snippets
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:94-130` (search_files function)
+
+### Indexing
+
+Chunks are indexed in two ways:
+
+1. **File system search**: Fast keyword matching in file names and content
+2. **Vector store**: Embedded as 3072-d vectors for semantic search
+
+When chunks are added:
+```python
+store_wisdom_chunks_batch([
+    {
+        "text": chunk_content,
+        "source": "knowledge/chunks/filename.md",
+        "metadata": {"stack": "react", "version": "19"}
+    }
+])
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:194-244`
+
+## Layer 2: Skills (Organized Patterns)
+
+**Location**: `knowledge/skills/`
+
+**Purpose**: Structured, actionable skill packs organized by technology.
+
+**Characteristics**:
+- One directory per skill (78 total)
+- Contains `SKILL.md` main document
+- Optional `compatibility.json` for stack matching
+- Versioned and stack-specific
+- Production-tested patterns
+
+**Examples**:
+```
+skills/
+├── angular/
+├── astro_v5_patterns/
+├── django_v5/
+├── docker-containerization/
+├── nextjs/
+├── react/
+└── SKILL_TEXT_CHUNKING/
+```
+
+**Access**:
+```python
+# List skills with stack filtering
+list_skills(stack="python,fastapi")
+
+# Get complete skill document
+get_skill("nextjs")
+
+# As MCP resource
+# midos://skill/nextjs
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:241-310` (list_skills and get_skill)
+
+### Stack-Aware Sorting
+
+Skills can be filtered by technology stack using `compatibility.json`:
+
+```json
+{
+  "languages": ["Python", "TypeScript"],
+  "frameworks": ["FastAPI", "React"],
+  "databases": ["PostgreSQL"],
+  "version": "2026-02-15"
+}
+```
+
+When you query with `list_skills(stack="python,react")`, skills with matching compatibility get a score boost:
+- +2 points for framework/language match in `compatibility.json`
+- +1 point for match in skill name
+
+Reference: `modules/mcp_server/midos_mcp.py:276-305`
+
+## Layer 3: Truth (Empirical Patches)
+
+**Location**: `knowledge/truth/`
+
+**Purpose**: Verified knowledge backed by empirical evidence.
+
+**Characteristics**:
+- Myth-busting with proof
+- Empirical test results
+- Counter-narrative to common misconceptions
+- References to original sources
+
+**Files**:
+- `INDEX.md` - Truth patches catalog
+- `PATCHES_INDEX.md` - Patch tracking
+- Individual truth patches (50 items in production)
+
+**Access**:
+```python
+get_truth("AGENT_MITIGATIONS_CONTEXT_OVERFLOW")
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:354-372`
+
+### Truth Validation Criteria
+
+To be promoted from skills to truth, content must:
+
+1. **Have empirical evidence** (benchmark, test, measurement)
+2. **Contradict a common belief** OR validate a controversial claim
+3. **Include reproduction steps** for the evidence
+4. **Reference authoritative sources**
+
+## Layer 4: EUREKA (Validated Discoveries)
+
+**Location**: `knowledge/EUREKA/`
+
+**Purpose**: Breakthrough improvements with measured ROI.
+
+**Characteristics**:
+- Battle-tested in production
+- Quantified impact (latency, cost, accuracy)
+- Repeatable improvements
+- Validated across multiple contexts
+
+**Files**:
+- `EUREKA_CATALOG.md` - Full catalog of 383 discoveries
+- `INDEX.md` - Index and navigation
+
+**Access**:
+```python
+get_eureka("EUREKA_CACHE_SEMANTICA")
+get_eureka("ATOM_001")  # Also accepts ATOM IDs
+```
+
+Reference: `modules/mcp_server/midos_mcp.py:333-351`
+
+### EUREKA Validation Criteria
+
+To reach EUREKA status:
+
+1. **Measured improvement** with before/after metrics
+2. **Validated in production** (not just theory)
+3. **ROI documented** (time saved, cost reduced, quality improved)
+4. **Repeatable** across different projects/contexts
+
+**Example EUREKA**:
+```markdown
+# EUREKA: Semantic Response Cache
+
+## Impact
+- 85% latency reduction (2.3s → 350ms)
+- $0.12 → $0.02 per request (83% cost reduction)
+- Validated across 3 production deployments
+
+## Implementation
+...
+```
+
+## Layer 5: SOTA (State-of-the-Art)
+
+**Location**: `knowledge/SOTA/` (referenced in README, 140 items)
+
+**Purpose**: Best-in-class patterns that are currently unimprovable.
+
+**Characteristics**:
+- Industry-leading approaches
+- Multiple validation sources
+- No known better alternative (as of validation date)
+- Maintained and updated as field evolves
+
+**Access**:
+Currently integrated into skill packs and EUREKA catalog. SOTA items are marked with special indicators.
+
+### SOTA Validation Criteria
+
+To reach SOTA:
+
+1. **Best known approach** in the field (benchmarked against alternatives)
+2. **Published research** or industry adoption
+3. **No pending improvements** that would significantly change the approach
+4. **Regular revalidation** as technology evolves
+
+## Promotion Between Layers
+
+Content moves up the pyramid as it gains validation:
+
+```
+┌──────────────────────────────────────────────┐
+│  New Pattern Discovered                      │
+└──────────────┬───────────────────────────────┘
+               │
+               ▼
+        ┌─────────────┐
+        │  staging/   │  Manual review + cleanup
+        └──────┬──────┘
+               │
+               ▼
+        ┌─────────────┐
+        │  chunks/    │  Curated, indexed
+        └──────┬──────┘
+               │ Organize by stack
+               ▼
+        ┌─────────────┐
+        │  skills/    │  Structured, actionable
+        └──────┬──────┘
+               │ Add empirical evidence
+               ▼
+        ┌─────────────┐
+        │  truth/     │  Verified with tests
+        └──────┬──────┘
+               │ Measure ROI in production
+               ▼
+        ┌─────────────┐
+        │  EUREKA/    │  Validated improvements
+        └──────┬──────┘
+               │ Benchmark against alternatives
+               ▼
+        ┌─────────────┐
+        │  SOTA/      │  Best-in-class
+        └─────────────┘
+```
+
+### Promotion Triggers
+
+**chunks → skills**:
+- Organized into coherent pattern
+- Stack compatibility defined
+- Production-tested
+
+**skills → truth**:
+- Empirical evidence added
+- Common misconception busted
+- Reproduction steps included
+
+**truth → EUREKA**:
+- ROI measured in production
+- Validated across multiple contexts
+- Quantified improvements
+
+**EUREKA → SOTA**:
+- Benchmarked against all known alternatives
+- Industry recognition or research backing
+- No pending improvements
+
+## Search Across Layers
+
+Different tools search different layers:
+
+| Tool | Layers Searched | Use Case |
+|------|----------------|----------|
+| `search_knowledge` | All layers (L1-L5) | General keyword search |
+| `semantic_search` | Vectorized content (L1-L4) | Natural language queries |
+| `list_skills` | L2 only | Browse organized patterns |
+| `get_skill` | L2 only | Get specific skill pack |
+| `get_truth` | L3 only | Access verified knowledge |
+| `get_eureka` | L4 only | Access validated breakthroughs |
+
+Reference: `modules/mcp_server/midos_mcp.py:222-415`
+
+## Quality Gates
+
+Each layer has quality gates enforced during promotion:
+
+**L1 (chunks)**:
+- ✓ Human review
+- ✓ Markdown formatting
+- ✓ Cross-references checked
+- ✓ No obvious errors
+
+**L2 (skills)**:
+- ✓ All L1 criteria
+- ✓ Stack compatibility defined
+- ✓ Structured format (SKILL.md)
+- ✓ Production-tested
+
+**L3 (truth)**:
+- ✓ All L2 criteria
+- ✓ Empirical evidence included
+- ✓ Reproduction steps
+- ✓ Source references
+
+**L4 (EUREKA)**:
+- ✓ All L3 criteria
+- ✓ ROI quantified
+- ✓ Multi-context validation
+- ✓ Before/after metrics
+
+**L5 (SOTA)**:
+- ✓ All L4 criteria
+- ✓ Benchmarked vs alternatives
+- ✓ Industry recognition
+- ✓ Revalidated regularly
+
+## Next Steps
+
+- [Vector Store](/architecture/vector-store) - How knowledge is indexed and searched
+- [System Overview](/architecture/overview) - High-level architecture

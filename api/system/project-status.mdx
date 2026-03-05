@@ -1,0 +1,205 @@
+---
+title: 'project_status'
+description: 'Live MidOS system dashboard with quick-start guide'
+---
+
+## Function Signature
+
+```python
+async def project_status() -> str
+```
+
+## Description
+
+Returns a comprehensive, live MidOS system dashboard with real-time knowledge base statistics, available MCP tools with usage examples, research queue status, and agent quick-start guide.
+
+This is your `/status` command - use it to orient yourself and teach agents how to leverage MidOS effectively.
+
+The dashboard includes:
+- **Real-time knowledge stats**: Chunks (L1), Skills (L2), Truth Patches (L3), EUREKA (L4)
+- **Vector store health**: Status and total vector count
+- **Recent knowledge**: Last 5 chunks added by modification time
+- **Research queue**: Pending topics from RESEARCH_INTEREST_QUEUE.md
+- **MCP tools guide**: All available tools with arguments and descriptions
+- **Quick-start boot sequence**: Recommended workflow for new agents
+- **Pro tips**: Best practices for maximizing MidOS effectiveness
+
+## When to Use
+
+Use `project_status` when you need to:
+- **Orient a new agent** - Call this first to get the full system overview
+- **Check knowledge base health** - See live counts across all layers
+- **Discover available tools** - Get the complete MCP tools catalog with examples
+- **Learn the workflow** - Understand the recommended agent boot sequence
+- **Monitor system growth** - Track vectors, chunks, and skills over time
+- **Debug research pipeline** - See what's queued for processing
+
+This should be the **first tool you call** in any MidOS session to understand what's available and how to use it.
+
+## Parameters
+
+This tool takes no parameters.
+
+## Response Structure
+
+Returns a formatted Markdown string with the following sections:
+
+### 1. Knowledge Base (live)
+
+<ResponseField name="Chunks (L1)" type="integer">
+  Number of markdown files in `knowledge/chunks/`
+</ResponseField>
+
+<ResponseField name="Skills (L2)" type="integer">
+  Number of skill directories with SKILL.md files
+</ResponseField>
+
+<ResponseField name="Truth Patches (L3)" type="integer">
+  Number of markdown files in `knowledge/truth/`
+</ResponseField>
+
+<ResponseField name="EUREKA (L4)" type="integer">
+  Number of markdown files in `knowledge/EUREKA/`
+</ResponseField>
+
+<ResponseField name="Staging queue" type="integer">
+  Number of files waiting in `knowledge/staging/`
+</ResponseField>
+
+<ResponseField name="Vector store" type="string">
+  Status (online/offline/error) and total vector count
+</ResponseField>
+
+### 2. Recent Knowledge
+
+List of the 5 most recently modified chunk files by modification time.
+
+### 3. Research Queue
+
+Pending topics extracted from the `RESEARCH_INTEREST_QUEUE.md` PENDING section.
+
+### 4. MCP Tools
+
+Complete catalog of available tools with:
+- Tool name
+- Arguments
+- Description and use case
+
+### 5. Quick-Start Boot Sequence
+
+Recommended 4-step workflow for agents:
+1. `agent_handshake` - Get personalized config
+2. `semantic_search` - Check existing knowledge
+3. `list_skills` - Find reusable skills for your stack
+4. `episodic_store` - Share learnings back to MidOS
+
+### 6. Pro Tips
+
+Best practices including:
+- Always search before building
+- Use stack filters for relevance
+- Store your learnings for the knowledge loop
+- EUREKA atoms contain battle-tested improvements
+- Handshake once per session for optimization
+
+## Example Response
+
+````markdown
+# MidOS Status Dashboard
+
+## Knowledge Base (live)
+
+| Metric | Count |
+|--------|-------|
+| Chunks (L1) | 32847 |
+| Skills (L2) | 156 |
+| Truth Patches (L3) | 89 |
+| EUREKA (L4) | 234 |
+| Staging queue | 12 |
+| Vector store | online (32,847 vectors) |
+
+## Recent Knowledge
+
+- `react_server_components_2026.md`
+- `python_async_patterns.md`
+- `fastapi_dependency_injection.md`
+- `lancedb_hybrid_search.md`
+- `mcp_protocol_spec.md`
+
+## Research Queue
+
+- [HIGH] Claude 4.5 Sonnet extended thinking
+- [MEDIUM] Next.js 15 server actions
+- [MEDIUM] LangChain LCEL syntax
+
+## MCP Tools (use these!)
+
+- **search_knowledge**(query, max_results) — Keyword search across all knowledge layers
+- **semantic_search**(query, top_k, stack) — Vector search (smarter). Filter by stack: 'python,react'
+- **get_skill**(name) — Fetch a complete skill document
+- **list_skills**(filter, stack) — Browse all skills. Filter by stack
+- **agent_handshake**(model, client, languages, ...) — Personalized onboarding — call FIRST to get config tailored to your agent
+- **project_status**() — This dashboard — call anytime for live stats
+- **episodic_search**(query) — Search past agent experiences
+- **episodic_store**(task_type, input_preview, success) — Store learnings for future agents
+- **chunk_code**(file_path) — Parse code into semantic chunks for RAG
+- **research_youtube**(url) — Queue a video for research + transcription
+
+## Quick-Start (teach your agent)
+
+```
+1. agent_handshake(model, client, languages, project_goal)
+   → Get personalized config for YOUR agent
+
+2. semantic_search('your topic')
+   → Check if MidOS already knows about it
+
+3. list_skills(stack='python,react')
+   → Find reusable skills for your stack
+
+4. episodic_store(task_type, input_preview, success)
+   → Share what you learned back to MidOS
+```
+
+## Pro Tips
+
+- **Always search before building** — MidOS has 32K+ knowledge chunks
+- **Use stack filters** — `semantic_search('caching', stack='python')` is way more relevant
+- **Store your learnings** — `episodic_store` feeds the knowledge loop for ALL agents
+- **EUREKA = gold** — search for EUREKA atoms for battle-tested improvements with ROI data
+- **Handshake once per session** — `agent_handshake` optimizes everything for your context window
+
+---
+*MidOS v2026 | 2026-03-05 14:23 | 32,847 vectors | 32847 chunks | 234 EUREKA*
+````
+
+## Example Usage
+
+```python
+# Get full system dashboard
+dashboard = await project_status()
+print(dashboard)
+
+# Use at start of agent session
+async def agent_init():
+    # First, get the system status
+    status = await project_status()
+    
+    # Parse to understand available tools
+    print("System Overview:")
+    print(status)
+    
+    # Then proceed with handshake
+    config = await agent_handshake(
+        model="claude-sonnet-4.5",
+        client="cline",
+        languages=["python", "typescript"],
+        project_goal="Build FastAPI backend"
+    )
+```
+
+## Related Tools
+
+- [`hive_status`](/api/system/hive-status) - Basic system health snapshot
+- [`memory_stats`](/api/system/memory-stats) - Vector store detailed metrics
+- [`agent_handshake`](/api/agent/handshake) - Personalized agent onboarding

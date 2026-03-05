@@ -1,0 +1,565 @@
+---
+title: Vector Store
+description: LanceDB implementation with Gemini embeddings, hybrid search, and memory decay
+---
+
+MidOS uses **LanceDB** with **Gemini embeddings** for semantic search over the knowledge base. This page covers the implementation details.
+
+## Overview
+
+The vector store is implemented in `hive_commons/src/hive_commons/vector_store.py` and provides:
+
+- **Semantic search** via 3072-dimensional Gemini embeddings
+- **Keyword search** via BM25 full-text search (FTS)
+- **Hybrid search** with Reciprocal Rank Fusion (RRF)
+- **Memory decay scoring** for knowledge lifecycle management
+- **Multi-level caching** for performance
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:1-959`
+
+## Embedding Model
+
+**Model**: `gemini-embedding-001` from Google Gemini
+
+**Dimensions**: 3072
+
+**Configuration**:
+```python
+from google import genai
+
+client = genai.Client(api_key=get_api_key("GEMINI"))
+
+response = client.models.embed_content(
+    model="models/gemini-embedding-001",
+    contents=text,
+)
+
+embedding = response.embeddings[0].values  # 3072-d vector
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:42-83`
+
+### Why Gemini?
+
+- **High dimensionality** (3072-d) captures nuanced semantics
+- **Strong multilingual support** for international docs
+- **Fast API** with batch processing support
+- **Free tier** available for development
+
+## Table Structure
+
+**Table name**: `knowledge_chunks_cloud_rebuild`
+
+**Schema**:
+```python
+{
+    "text": str,           # Chunk content (indexed for FTS)
+    "vector": List[float], # 3072-d embedding
+    "source": str,         # Source file path (POSIX forward-slash)
+    "timestamp": float,    # Creation timestamp
+    "metadata": str,       # JSON-encoded metadata
+    # Optional decay fields:
+    "last_accessed": float,
+    "access_count": int,
+    "decay_score": float,
+}
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:24` and `221-233`
+
+### Path Normalization
+
+All source paths are normalized to POSIX forward-slash format (BL-118):
+
+```python
+for item in items:
+    if "source" in item and isinstance(item["source"], str):
+        item["source"] = item["source"].replace("\\", "/")
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:463-466`
+
+## Indexing Strategy
+
+### Adding Chunks
+
+**Batch processing** is the recommended approach for performance:
+
+```python
+from hive_commons.vector_store import store_wisdom_chunks_batch
+
+items = [
+    {
+        "text": "FastAPI uses dependency injection...",
+        "source": "knowledge/chunks/fastapi_patterns.md",
+        "metadata": {"stack": "python", "framework": "fastapi"}
+    },
+    # ... more items
+]
+
+count = store_wisdom_chunks_batch(items)
+print(f"Stored {count} chunks")
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:194-244`
+
+### Batch Performance
+
+**Performance comparison**:
+
+| Method | Time per text | Throughput |
+|--------|--------------|------------|
+| Sequential (original) | ~1200ms | 50 texts/min |
+| Batch (50/call) | ~35ms | 1,700 texts/min |
+| Batch + concurrent (4 workers) | **~19ms** | **3,100 texts/min** |
+| Cache hit | ~0ms | Instant |
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:86-103`
+
+### Batch Embedding Implementation
+
+```python
+def get_embeddings_batch(
+    texts: List[str], 
+    batch_size: int = 50, 
+    max_workers: int = 4
+) -> List[Optional[List[float]]]:
+    """Batch-embed multiple texts with concurrent API calls.
+    
+    Returns embeddings in same order as input.
+    """
+    # Phase 1: Check cache
+    results = [None] * len(texts)
+    uncached = [(i, text) for i, text in enumerate(texts) 
+                if _cache_key(text) not in _embedding_cache]
+    
+    # Phase 2: Batch embed uncached texts
+    batches = [(i, uncached_texts[i:i+batch_size]) 
+               for i in range(0, len(uncached_texts), batch_size)]
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for start_idx, embeddings in executor.map(_embed_batch, batches):
+            for j, emb in enumerate(embeddings):
+                results[start_idx + j] = emb
+                _embedding_cache[_cache_key(text)] = emb
+    
+    return results
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:86-191`
+
+## Full-Text Search (FTS) Index
+
+MidOS creates a **BM25 full-text search index** on the `text` column for keyword matching.
+
+**Index creation**:
+```python
+def _ensure_fts_index(self, tbl) -> bool:
+    """Create FTS index on text column if not already done."""
+    try:
+        # Test if index exists
+        tbl.search("test", query_type="fts").limit(1).to_list()
+        return True
+    except Exception:
+        # Create index
+        tbl.create_fts_index("text", replace=True)
+        return True
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:419-435`
+
+## Search Modes
+
+The vector store supports **three search modes**:
+
+### 1. Vector Search (Semantic)
+
+Pure semantic search using cosine similarity on embeddings:
+
+```python
+results = search_memory(
+    "how to implement caching in FastAPI",
+    top_k=5,
+    search_mode="vector"
+)
+```
+
+**Process**:
+1. Embed the query using `get_query_embedding()`
+2. Find top-k nearest neighbors by vector distance
+3. Return ranked results
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:522-528`
+
+### 2. Keyword Search (BM25)
+
+Pure keyword matching using BM25 algorithm:
+
+```python
+results = search_memory(
+    "FastAPI dependency injection",
+    top_k=5,
+    search_mode="keyword"
+)
+```
+
+**Process**:
+1. Query the FTS index directly
+2. BM25 ranks results by term frequency and document frequency
+3. Return ranked results
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:531-540`
+
+### 3. Hybrid Search (Default)
+
+Combines vector and keyword search using **Reciprocal Rank Fusion (RRF)**:
+
+```python
+results = search_memory(
+    "React Server Components",
+    top_k=5,
+    search_mode="hybrid",  # default
+    alpha=0.5  # 0.0=pure keyword, 1.0=pure vector
+)
+```
+
+**Process**:
+1. Retrieve `top_k * 3` candidates from both vector and keyword search
+2. Fuse using alpha-weighted RRF
+3. Optionally rerank using cross-encoder
+4. Return top-k final results
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:543-565`
+
+### Benchmark Results
+
+Hybrid search (RRF fusion) shows **+9.3% relevance improvement** over vector-only on 9,753 vectors.
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:393-396`
+
+## Reciprocal Rank Fusion (RRF)
+
+**Algorithm**:
+```python
+score(doc) = alpha * (1 / (vec_rank + k)) + (1 - alpha) * (1 / (fts_rank + k))
+```
+
+**Parameters**:
+- `k` = 60 (standard RRF constant, higher = more weight to lower ranks)
+- `alpha` = 0.5 (default: equal weight to vector and keyword)
+
+**Implementation**:
+```python
+@staticmethod
+def _rrf_fuse_weighted(
+    vec_results: List[dict],
+    fts_results: List[dict],
+    alpha: float = 0.5,
+    k: int = 60,
+    limit: int = 10,
+) -> List[dict]:
+    """Alpha-weighted Reciprocal Rank Fusion."""
+    doc_scores: Dict[str, tuple] = {}
+    
+    # Score from vector search
+    for rank, doc in enumerate(vec_results):
+        doc_id = doc["text"][:200]
+        score = alpha * (1.0 / (rank + 1 + k))
+        doc_scores[doc_id] = (score, doc)
+    
+    # Add score from keyword search
+    for rank, doc in enumerate(fts_results):
+        doc_id = doc["text"][:200]
+        score = (1.0 - alpha) * (1.0 / (rank + 1 + k))
+        if doc_id in doc_scores:
+            doc_scores[doc_id] = (doc_scores[doc_id][0] + score, doc)
+        else:
+            doc_scores[doc_id] = (score, doc)
+    
+    # Sort by combined score
+    sorted_docs = sorted(doc_scores.values(), 
+                        key=lambda x: x[0], 
+                        reverse=True)
+    return [doc for _, doc in sorted_docs[:limit]]
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:585-616`
+
+## Caching Mechanisms
+
+MidOS uses **three levels of caching**:
+
+### 1. Embedding Cache (In-Memory)
+
+**Purpose**: Avoid re-embedding identical text within a session
+
+**Key**: SHA256 hash (first 16 chars) of text
+
+**Storage**: In-memory dictionary (3072-d vectors are too large for JSON)
+
+```python
+_embedding_cache: Dict[str, List[float]] = {}
+
+def _cache_key(text: str) -> str:
+    import hashlib
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:28-38`
+
+### 2. Query Embedding Cache (LRU)
+
+**Purpose**: Cache query embeddings for repeat searches
+
+**TTL**: 5 minutes
+
+**Eviction**: LRU (Least Recently Used)
+
+**Max size**: 100 entries
+
+```python
+_QUERY_EMBEDDING_CACHE: dict = {}  # {text: (timestamp, embedding)}
+_QUERY_EMBEDDING_CACHE_TTL = 300  # seconds
+_QUERY_EMBEDDING_CACHE_MAX = 100
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:288-329`
+
+### 3. Query Result Cache
+
+**Purpose**: Cache complete search results
+
+**TTL**: 60 seconds
+
+**Key**: Hash of query + parameters
+
+```python
+class VectorStore:
+    _query_cache: dict = {}  # {cache_key: (timestamp, results)}
+    _QUERY_CACHE_TTL = 60
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:400-401` and `505-511`
+
+## Query Expansion
+
+Short queries are **automatically expanded** with domain synonyms for better embedding match:
+
+```python
+def expand_query(query: str) -> str:
+    """Expand short queries with context."""
+    if len(query) > 60:
+        return query  # Already descriptive
+    
+    q_lower = query.lower()
+    expansions = {
+        "caching": "caching response cache semantic cache performance",
+        "testing": "testing unit test integration test e2e playwright vitest",
+        "fastapi": "FastAPI Python web framework async Pydantic",
+        "react": "React hooks components state management JSX",
+        # ... more expansions
+    }
+    
+    for term, expansion in expansions.items():
+        if term in q_lower:
+            return f"{query} — {expansion}"
+    
+    return query
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:247-285`
+
+## Memory Decay Scoring
+
+MidOS implements **importance-weighted exponential decay** for knowledge lifecycle management.
+
+### Decay Formula (V1)
+
+```python
+decay_score = base_quality * time_factor * access_boost
+
+where:
+  time_factor = 0.95 ^ days_since_access  # ≈ half-life of 14 days
+  access_boost = log(access_count + 1)     # logarithmic
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:340-366`
+
+### Decay Formula (V2, Research-Grade)
+
+```python
+decay_score = base_score * importance * time_factor * access_boost
+
+where:
+  time_factor = exp(-λ * days_since_access)
+  λ = log(2) / half_life_days  # default: 30 days
+  access_boost = 1.0 + 0.1 * log(access_count + 1)
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:369-389`
+
+### Decay Operations
+
+**Get decay report** (find stale chunks):
+```python
+from hive_commons.vector_store import get_decay_report
+
+report = get_decay_report(limit=20)
+# Returns chunks sorted by decay_score (lowest = most stale)
+```
+
+**Refresh chunk** (mark as freshly accessed):
+```python
+from hive_commons.vector_store import refresh_chunk
+
+refresh_chunk("FastAPI uses dependency injection...")
+# Updates last_accessed and increments access_count
+```
+
+**Archive chunk** (move to cold storage):
+```python
+from hive_commons.vector_store import archive_chunk
+
+archive_chunk("Outdated React 16 pattern...")
+# Sets decay_score to -1 (sentinel), writes to archive log
+```
+
+**Batch rescore** (weekly maintenance):
+```python
+from hive_commons.vector_store import batch_rescore
+
+stats = batch_rescore()
+# Recalculates decay scores for all chunks
+# Returns: {"total": 670000, "rescored": 670000, "stale_below_threshold": 1234}
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:681-864`
+
+## Reranking
+
+Optional **reranking** can improve result quality:
+
+```python
+results = search_memory(
+    "React Server Components",
+    top_k=5,
+    rerank=True  # Apply reranking
+)
+```
+
+### Cross-Encoder Reranking
+
+Uses `sentence-transformers` cross-encoder (optional dependency):
+
+```python
+from sentence_transformers import CrossEncoder
+
+model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+pairs = [(query, candidate["text"][:512]) for candidate in candidates]
+scores = model.predict(pairs)
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:633-651`
+
+### Fallback Reranking
+
+If cross-encoder is unavailable, fallback to score-based reranking:
+
+```python
+score = 0.6 * normalized_rank + 0.4 * keyword_overlap
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:653-671`
+
+## Usage Examples
+
+### Basic Search
+
+```python
+from hive_commons.vector_store import search_memory
+
+# Hybrid search (default)
+results = search_memory("FastAPI dependency injection", top_k=5)
+
+for result in results:
+    print(f"Source: {result['source']}")
+    print(f"Score: {result['score']:.3f}")
+    print(f"Text: {result['text'][:200]}...\n")
+```
+
+### Stack-Filtered Search
+
+```python
+# Boost results mentioning Python + FastAPI
+results = search_memory(
+    "how to implement caching",
+    top_k=5,
+    stack="python,fastapi"  # Stack filter applied in mcp tool
+)
+```
+
+Note: Stack filtering is implemented in the MCP tool layer, not the vector store itself.
+
+Reference: `modules/mcp_server/midos_mcp.py:399-408`
+
+### Advanced Search
+
+```python
+# Vector-only search with reranking
+results = search_memory(
+    "event sourcing CQRS patterns",
+    top_k=10,
+    search_mode="vector",
+    rerank=True,
+    alpha=1.0  # Full weight to vector (ignored in vector-only mode)
+)
+```
+
+### Memory Statistics
+
+```python
+from hive_commons.vector_store import get_memory_stats
+
+stats = get_memory_stats()
+print(stats)
+# {
+#   "status": "online",
+#   "engine": "lancedb_hybrid (gemini-embedding-001 + BM25 RRF + decay)",
+#   "table": "knowledge_chunks_cloud_rebuild",
+#   "total_chunks": 670000
+# }
+```
+
+Reference: `hive_commons/src/hive_commons/vector_store.py:925-932`
+
+## Performance Tuning
+
+### Embedding Performance
+
+**Recommendations**:
+- Use `store_wisdom_chunks_batch()` instead of `store_wisdom_chunk()` for bulk inserts
+- Increase `max_workers` for faster batch embedding (4-8 workers on production)
+- Monitor cache hit rate with logging
+
+### Search Performance
+
+**Recommendations**:
+- Use `search_mode="keyword"` for exact term matching (fastest)
+- Use `search_mode="vector"` for semantic queries (moderate speed)
+- Use `search_mode="hybrid"` for best quality (slightly slower)
+- Disable reranking unless quality is critical
+- Monitor query cache hit rate
+
+### Memory Usage
+
+**Recommendations**:
+- Embedding cache is in-memory only (no disk persistence)
+- Query embedding cache auto-evicts after 100 entries (LRU)
+- Query result cache auto-expires after 60 seconds
+- For production, consider external Redis cache for query embeddings
+
+## Next Steps
+
+- [Authentication](/architecture/authentication) - API key system and rate limiting
+- [Knowledge Layers](/architecture/knowledge-layers) - Understanding the 5-layer pipeline
+- [System Overview](/architecture/overview) - High-level architecture

@@ -1,0 +1,671 @@
+---
+title: "agent_handshake"
+description: "Personalized agent onboarding with optimal configuration"
+---
+
+# agent_handshake
+
+Call this FIRST when connecting to MidOS. Declare your environment and get optimal configuration tailored to your model, client, stack, and project goals.
+
+## Overview
+
+`agent_handshake` is the entry point for all agents connecting to MidOS. It analyzes your capabilities and environment, then returns:
+
+- **Model detection**: Auto-detects context window from 31+ models in catalog
+- **Context optimization**: Adjusts response size based on your budget (small/medium/large)
+- **Stack-aware recommendations**: Suggests relevant skills and tools for your languages/frameworks  
+- **Client-specific tips**: Tailored advice for Claude Code, Cursor, Windsurf, Cline, etc.
+- **Adaptive guardrails**: Rules that match your model's capabilities
+
+## Function Signature
+
+```python
+async def agent_handshake(
+    model: str = "",
+    context_window: int = 0,
+    client: str = "",
+    languages: str = "",
+    frameworks: str = "",
+    platform: str = "",
+    project_goal: str = "",
+) -> str
+```
+
+## Parameters
+
+### `model` (optional)
+
+**Type:** `str`  
+**Default:** `""`
+
+Your model ID. Supports:
+- Full names: `"claude-opus-4-6"`, `"gpt-5.3-codex"`, `"gemini-2.5-pro"`
+- Short names: `"opus"`, `"sonnet"`, `"haiku"`  
+- Aliases: `"o3"`, `"deepseek"`, `"qwen coder"`
+- OpenRouter prefixes: `"openrouter/glm-4.5-air:free"` → resolves to `glm-4.5-air`
+
+**Auto-detection logic:**
+1. Exact match in MODEL_CATALOG (31 models)
+2. Alias lookup (60+ variations)
+3. Substring matching (handles prefixed names)
+4. Fuzzy matching (0.85 cutoff to prevent wrong matches)
+
+If no match, returns safe defaults (128K context assumed).
+
+**Example models:**
+- Claude: `opus`, `sonnet`, `haiku`
+- GPT: `gpt-5.3-codex`, `gpt-5.2-xhigh`, `o3`, `o3-mini`
+- Gemini: `gemini-2.5-pro` (1M context), `gemini-2.5-flash` (506 t/s)
+- DeepSeek: `deepseek-r1`, `deepseek-v3.1`
+- Free tier: `glm-4.5-air`, `qwen3-coder`, `llama-3.3-70b`, `big-pickle`
+
+### `context_window` (optional)
+
+**Type:** `int`  
+**Default:** `0` (auto-detect)
+
+Your context window in tokens. Pass `0` to auto-detect from model catalog.
+
+**When to set manually:**
+- Your model isn't in the catalog
+- You want to override the default (e.g., testing with reduced context)
+- Your client enforces a lower limit than the model
+
+**Context budget tiers:**
+- **small** (≤32K): Compact responses, top 2 tools/skills
+- **medium** (32K-128K): Standard format, top 5 tools/skills  
+- **large** (>128K): Full format with previews, top 15 skills
+
+### `client` (optional)
+
+**Type:** `str`  
+**Default:** `""`
+
+Your CLI/IDE. Recognized clients:
+- `"claude-code"`, `"codex-cli"`, `"cursor"`, `"windsurf"`
+- `"cline"`, `"continue"`, `"aider"`, `"zed"`  
+- `"github-copilot"`, `"amazon-q"`, `"replit"`, `"lovable"`
+- `"opencode"`
+
+**Client detection:**
+- Resolves aliases: `"claude code"` → `"claude-code"`, `"gh-copilot"` → `"github-copilot"`
+- Loads CLI-specific profile from `config/cli_profiles.json`
+- Applies tool restrictions, delegation policies, attention pinch rules
+
+**Why it matters:**
+- **Hooks**: Claude Code, Windsurf → lifecycle hooks enabled
+- **Memory**: Windsurf, GitHub Copilot → session persistence tips
+- **Background agents**: Claude Code, Zed → parallel delegation advice
+- **Context management**: Cursor (dynamic pruning), Aider (repo-map)
+
+### `languages` (optional)
+
+**Type:** `str` (comma-separated)  
+**Default:** `""`
+
+Programming languages for your project.
+
+**Examples:**
+- `"python,typescript"`
+- `"rust,go"`  
+- `"javascript,html,css"`
+
+**Impact:**
+- Filters skills by `compatibility.json` (exact match gets +3 score)
+- Suggests stack-specific skills (e.g., `python` → `django_v5`, `fastapi_patterns`)
+- Ranks tools by language keywords (e.g., `typescript` boosts `chunk_code`)
+
+### `frameworks` (optional)
+
+**Type:** `str` (comma-separated)  
+**Default:** `""`
+
+Frameworks/libraries you're using.
+
+**Examples:**
+- `"fastapi,react"`
+- `"django,postgresql,redis"`
+- `"nextjs,tailwind,prisma"`
+
+**Impact:**
+- Matches against skill `compatibility.json` (exact match +3 score)
+- Suggests framework-specific skills:
+  - `react` → `react_comprehensive`  
+  - `nextjs` → `nextjs`
+  - `fastapi` → `fastapi_patterns`
+  - `postgresql` → `postgresql_patterns`
+
+### `platform` (optional)
+
+**Type:** `str`  
+**Default:** `""`
+
+Your operating system.
+
+**Examples:**
+- `"windows"`, `"linux"`, `"macos"`
+
+**Impact:**
+- Adds platform-specific guardrails:
+  - **Windows**: `Use ';' not '&&'`, `Use 'python -c' as fallback for PowerShell`
+  - **Linux/macOS**: Standard bash workflows
+
+### `project_goal` (optional)
+
+**Type:** `str`  
+**Default:** `""`
+
+What you're working on (free-form description).
+
+**Examples:**
+- `"manga engine with SVG rendering"`
+- `"real-time chat app with WebSocket"`  
+- `"microservices API with gRPC"`
+
+**Impact:**
+1. **Semantic search**: Finds relevant knowledge chunks via vector similarity (top 5, score ≥0.25)
+2. **Skill matching**: Scores skills by keyword overlap with goal (e.g., "API" → `fastapi_patterns`)
+3. **Tool ranking**: Boosts tools that match goal keywords
+
+**Note:** Generic goals (`"test"`, `"hello"`, `"demo"`) are skipped to avoid noise.
+
+## Response Format
+
+Returns a context-budget-aware markdown string with:
+
+### 1. Getting Started (3 steps)
+
+```
+1. semantic_search('your topic here')
+   → Check what MidOS already knows
+
+2. list_skills(stack='python,react')  
+   → Find reusable skill docs for your stack
+
+3. hybrid_search('specific question')
+   → Deep search with grep + semantic fusion
+```
+
+### 2. Top Tools (ranked by relevance)
+
+| Tool | Use for | Tier |
+|------|---------|------|
+| `semantic_search` | Vector search with LanceDB + Gemini embeddings | DEV |
+| `list_skills` | List available skills/capabilities | COMMUNITY |
+| `chunk_code` | AST-based code chunking for RAG retrieval | DEV |
+
+### 3. Identity & Model Info
+
+**MidOS** — MCP Community Library -- Knowledge base + Research engine | Root: `/path/to/midos`
+
+**Model:** claude-sonnet-4-5 | Context: 200,000 | Code: 9/10 | Speed: ~100 t/s  
+**Client:** claude-code | MCP: stdio, streamable-http | Features: hooks, memory, bg-agents
+
+**Context:** 200,000 tokens | tier: large
+
+### 4. CLI Profile (role & instructions)
+
+**Example for Claude Code (autonomous agent):**
+
+- You are an autonomous agent with full read-write MCP access
+- Prefer `semantic_search` over `search_knowledge` for better relevance
+- Use delegation for parallel research (Haiku speed, Opus quality)
+- Call `/compact` every ~20 turns to manage context
+
+### 5. Relevant Skills (model-recommended + stack-matched)
+
+**Priority order:**
+1. **Model-recommended** (from MODEL_CATALOG): e.g., Claude Opus → `antifragile_protocol`, `formal_logic_verification`
+2. **Stack-matched**: Languages/frameworks with +3 score for exact compatibility  
+3. **Goal-matched**: Keywords from `project_goal`
+4. **Fallback**: Popular skills if no matches
+
+**Example:**
+- **pragmatic_engineering** — Match con stack: python, fastapi
+- **context_manager** — Recomendada para claude-sonnet-4-5
+- **fastapi_patterns** — Relevante para: real-time chat app
+
+### 6. Knowledge Chunks (semantic search results)
+
+Only shown if `project_goal` is meaningful (not "test", "hello", etc.).
+
+**Small tier:** 1 chunk  
+**Medium tier:** 2 chunks  
+**Large tier:** 5 chunks (with 200-char previews)
+
+### 7. Adaptive Guardrails
+
+**Universal (always):**
+- Never hardcode secrets -- use os.getenv() + .env
+- Check indices before creating new ones  
+- Windows/PowerShell: use ';' not '&&'
+- Polling: max 10s between checks, never wait 60s
+
+**Model-specific (if context ≤32K):**
+- Keep tool calls concise, avoid verbose outputs
+- Prefer search_knowledge over semantic_search for lower token cost
+
+**Client-specific (if no hooks):**
+- Implement guardrails in prompts, not lifecycle hooks
+- Use CLAUDE.md or project rules for persistent behavior
+
+**Tier-specific:**
+- **community**: Rate limit: 100 calls/hour, read-only EUREKA
+- **dev**: Rate limit: 1000 calls/hour, full EUREKA access
+
+### 8. Model & Client Tips
+
+**Model tips** (from MODEL_CATALOG):
+- "Best balance of intelligence and speed" (Sonnet 4.5)
+- "SWE-bench Verified: 77-82%" (Sonnet 4.5)  
+- "1M context — can handle entire codebases" (Gemini 2.5 Pro)
+
+**Client tips** (from CLIENT_CATALOG):
+- "Use /compact every ~20 iterations" (Claude Code)
+- "Use Composer mode for multi-file editing" (Cursor)
+- "300K context — largest among major IDEs" (Windsurf)
+
+### 9. Suggestions (proactive recommendations)
+
+- Your client doesn't support hooks. Consider Claude Code or Windsurf for lifecycle hooks.
+- MidOS has a skill for react: run `get_skill('react_comprehensive')` to load best practices.
+- Free tier: 17 tools, 500 queries/mo — no API key needed.
+
+### 10. Resume Hint (if previous session exists)
+
+**Resume Available**  
+Last session: `sess_20260305_043521` (2h ago, 47 tool calls)  
+Call `where_was_i()` to get your full session summary.
+
+## Example Calls
+
+### Minimal (auto-detect everything)
+
+```python
+await agent_handshake()
+```
+
+Returns generic profile with safe defaults (128K context, 17 community tools, top 10 popular skills).
+
+### Basic (model + client)
+
+```python
+await agent_handshake(
+    model="sonnet",
+    client="claude-code"
+)
+```
+
+Detects:
+- Model: `claude-sonnet-4-5` (200K context, code: 9/10)
+- Client: `claude-code` (hooks ✓, memory ✓, bg-agents ✓)
+- Recommends: `pragmatic_engineering`, `context_manager`, `memory_lifecycle`
+
+### Full stack declaration
+
+```python
+await agent_handshake(
+    model="gpt-5.3-codex",
+    client="codex-cli",
+    languages="python,typescript",
+    frameworks="fastapi,react,postgresql",
+    platform="linux",
+    project_goal="real-time chat API with WebSocket and Redis pub/sub"
+)
+```
+
+Detects:
+- Model: `gpt-5.3-codex` (128K context, code: 10/10, execution-optimized)
+- Recommended skills: `midos_codex_control_plane`, `fastapi_patterns`, `redis_caching_patterns`, `postgresql_patterns`
+- Knowledge chunks: Semantic search for "real-time chat API" (top 5 with score ≥0.25)
+- Tools ranked: `semantic_search`, `episodic_search`, `chunk_code` (boosted by "API" keyword)
+
+### Free tier agent (OpenCode + free models)
+
+```python
+await agent_handshake(
+    model="glm-4.5-air",
+    client="opencode",
+    languages="python",
+    project_goal="test MidOS free tier"
+)
+```
+
+Returns:
+- Model: `glm-4.5-air` (128K context, free via OpenRouter)
+- Client: `opencode` (MCP stdio, manual context management)
+- Suggestion: "Add free OpenRouter models to OpenCode: run `python -m modules.mcp_server.midos_mcp --setup opencode --models free`"
+- Tools: 17 community-tier tools (no EUREKA access)
+
+### Unknown model (fallback)
+
+```python
+await agent_handshake(
+    model="custom-fine-tune-2024",
+    context_window=64000,
+    client="cursor"
+)
+```
+
+Returns:
+- Model: Not in catalog (using 64K context from parameter)
+- Client: `cursor` (dynamic pruning, @Codebase symbol)
+- Suggestion: "Model 'custom-fine-tune-2024' not in catalog. Using safe defaults (64K context). Pass context_window=N for accurate budget."
+
+## Response Examples
+
+### Small context (≤32K)
+
+```markdown
+# MidOS Agent Handshake
+
+## Getting Started (3 steps)
+1. semantic_search('your topic here') → Check what MidOS already knows
+2. list_skills(stack='python,react') → Find reusable skill docs
+3. hybrid_search('specific question') → Deep search with fusion
+
+## Top Tools
+| Tool | Use for | Tier |
+|------|---------|------|
+| `search_knowledge` | Keyword search (low token cost) | COMMUNITY |
+| `list_skills` | List skills/capabilities | COMMUNITY |
+
+**Model:** gpt-4o-mini | Context: 32,000 | Code: 7/10 | Speed: ~175 t/s  
+**Client:** cline | MCP: stdio | Features: basic
+
+**Context:** 32,000 tokens | tier: small
+
+## CLI Profile: Cline (role: approval-required)
+- 1000 files indexed limit, 300KB file size limit
+- Approval required for every action
+
+## Relevant Skills (2)
+- **pragmatic_engineering** — Skill popular recomendada
+- **health_check** — Skill popular recomendada
+
+## Guardrails (5)
+- Never hardcode secrets -- use os.getenv() + .env
+- Keep tool calls concise, avoid verbose outputs
+- Prefer search_knowledge over semantic_search
+
+## Tips (2)
+- Cost-efficient for simple tasks
+- 1000 files indexed limit
+
+---
+_MidOS Handshake v1.1 -- 2026-03-05 04:35_
+```
+
+### Large context (>128K, full format)
+
+```markdown
+# MidOS Agent Handshake
+
+## Getting Started (3 steps)
+...
+
+## Top Tools
+| Tool | Use for | Tier |
+|------|---------|------|
+| `semantic_search` | Vector search with LanceDB + Gemini embeddings | DEV |
+| `list_skills` | List available skills/capabilities | COMMUNITY |
+| `chunk_code` | AST-based code chunking for RAG retrieval | DEV |
+| `episodic_search` | Search episodic memory for past experiences | DEV |
+| `get_skill` | Get a specific skill/capability document | COMMUNITY |
+
+**MidOS** — MCP Community Library | Root: `/home/midos`
+
+**Model:** gemini-2.5-pro | Context: 1,000,000 | Code: 9/10 | Speed: ~110 t/s  
+**Client:** windsurf | MCP: stdio, streamable-http | Features: hooks, memory, bg-agents
+
+**Context:** 300,000 tokens | tier: large
+
+## CLI Profile: Windsurf (role: autonomous)
+- You are an autonomous agent with full read-write MCP access
+- 300K context — largest among major IDEs
+- Cascade Memories persist across sessions
+- Use semantic_search for better relevance
+- Delegate background tasks to parallel agents
+
+### Delegation Policy
+**Your strengths:** autonomous coding, memory persistence, multi-file editing  
+- Delegate to **aider**: Cost-efficient batch refactoring (repo-map context)
+- Delegate to **cursor**: Rapid prototyping with @Codebase symbol
+
+**Defaults:** Search: hybrid | Format: markdown
+
+## More Tools (8)
+- **search_knowledge** — Keyword search across knowledge base [COMMUNITY]
+- **get_protocol** — Get a protocol document [DEV]
+- **episodic_store** — Store new episodic memory/reflection [DEV]
+...
+
+## Relevant Skills (10)
+- **semantic_topology** — Recomendada para gemini-2.5-pro
+- **memory_lifecycle** — Recomendada para gemini-2.5-pro  
+- **context_manager** — Recomendada para gemini-2.5-pro
+- **fastapi_patterns** — Match con stack: python, fastapi
+- **react_comprehensive** — Match con stack: typescript, react
+...
+
+## Knowledge Chunks (5)
+- **websocket_fastapi_patterns** (knowledge/chunks/websocket_fastapi_patterns.md)
+  > Real-time WebSocket implementation with FastAPI. Covers connection management, Redis pub/sub integration, and scaling strategies...
+- **redis_pubsub_architecture** (knowledge/chunks/redis_pubsub_architecture.md)
+  > Redis pub/sub for distributed systems. Message broadcasting, channel patterns, and subscriber lifecycle...
+...
+
+## Guardrails (7)
+- Never hardcode secrets -- use os.getenv() + .env
+- Check indices before creating new ones
+- Polling: max 10s between checks
+...
+
+## Tips (8)
+- 1M context — can handle entire codebases (Gemini 2.5 Pro)
+- Native multimodal (text, audio, images, video) (Gemini 2.5 Pro)
+- 300K context — largest among major IDEs (Windsurf)
+- Cascade Memories persist across sessions (Windsurf)
+- Use /compact every ~20 turns (Windsurf)
+...
+
+## Suggestions (3)
+- MidOS has a skill for fastapi: run `get_skill('fastapi_patterns')` to load best practices.
+- MidOS has a skill for react: run `get_skill('react_comprehensive')` to load best practices.
+- Help improve MidOS: run auditions from sandbox/auditions/ to test tools and contribute.
+
+---
+_MidOS Handshake v1.1 -- 2026-03-05 04:35_
+```
+
+## Model Detection Examples
+
+### Claude family
+
+```python
+"opus" → claude-opus-4-6 (200K, code: 10/10, SWE-bench 80.9%)
+"sonnet" → claude-sonnet-4-5 (200K, code: 9/10, SWE-bench 77-82%)  
+"haiku" → claude-haiku-4-5 (200K, code: 8/10, 3x faster)
+"claude opus" → claude-opus-4-6
+"anthropic/claude-sonnet-4-5" → claude-sonnet-4-5
+```
+
+### GPT family
+
+```python
+"gpt-5.3-codex" → Execution-optimized Codex (128K, code: 10/10)
+"gpt-5.2-xhigh" → Architecture-heavy profile (128K, reasoning: 10/10)
+"gpt-5.2-medium" → Balanced day-to-day implementation (128K)
+"gpt-5.1-mini" → Fast triage (128K, 140 t/s)
+"o3" → gpt-o3 (200K, SWE-Bench Pro SOTA: 55.6%)
+"o3-mini" → gpt-o3-mini (200K, cost-efficient reasoning)
+```
+
+### Gemini family
+
+```python
+"gemini-2.5-pro" → 1M context, multimodal, thinking capabilities
+"gemini-2.5-flash" → 1M context, 506 t/s (fastest)
+"gemini flash lite" → gemini-2.5-flash-lite (edge tier, 506 t/s)
+```
+
+### Free tier (OpenRouter)
+
+```python
+"glm-4.5-air" → Free via OpenRouter, fast tool use
+"qwen3-coder" → Free, strong code generation  
+"llama-3.3-70b" → Free, 70B general-purpose
+"deepseek-r1-0528" → Free, 671B MoE reasoning (slow but deep)
+"big-pickle" → Stealth model via OpenCode Zen (200K, free during beta)
+```
+
+## Stack-Aware Skill Recommendations
+
+### Model-recommended skills (highest priority)
+
+**Claude Opus 4.6:**
+- `antifragile_protocol` (failure diagnosis, deep reasoning)
+- `formal_logic_verification` (architecture validation)  
+- `context_manager` (200K context optimization)
+- `sovereign_grand_strategy` (long-term planning)
+
+**GPT-5.3 Codex:**
+- `midos_codex_control_plane` (execution control)
+- `midos_codex_feedback_loop` (iterative refinement)  
+- `pragmatic_engineering` (multi-file implementation)
+- `repair_json` (structured output fixing)
+
+**Qwen 2.5 Coder 32B:**
+- `qwen_all` (Qwen-specific patterns)
+- `qwen_coder_delta` (code-specific optimizations)  
+- `formal_logic_verification` (92 languages support)
+
+### Stack-matched skills (exact compatibility)
+
+**Languages:**
+- `python` → `django_v5`, `fastapi_patterns`, `python_mastery`
+- `typescript` → `typescript_mastery`, `nextjs`, `react_comprehensive`  
+- `rust` → `rust_language`
+- `go` → `go_language`
+
+**Frameworks:**
+- `react` → `react_comprehensive`
+- `nextjs` → `nextjs`  
+- `django` → `django_v5`
+- `fastapi` → `fastapi_patterns`
+- `postgresql` → `postgresql_patterns`
+- `redis` → `redis_caching_patterns`
+
+## Context Window Optimization
+
+**Auto-detection priority:**
+
+1. **profile.context_window** (explicit override)
+2. **model_spec.context_window** (from MODEL_CATALOG)  
+3. **client_spec.max_context** (from CLIENT_CATALOG)
+4. **Default:** 128,000 tokens
+
+**Effective window** = `min(all_detected_windows, 10_000_000)`
+
+**Response tier logic:**
+
+```python
+if effective_window <= 32_000:
+    tier = "small"  # Compact: top 2 tools, 2 skills, 3 guardrails
+elif effective_window <= 128_000:
+    tier = "medium"  # Standard: top 5 tools, 5 skills, all guardrails
+else:
+    tier = "large"  # Full: top 15 skills, 5 chunks with previews, all tips
+```
+
+**Client overrides:**
+
+- **Windsurf:** max_context = 300,000 (overrides model if lower)
+- **Claude Code:** max_context = 200,000  
+- **Cline:** max_context = 0 (model-dependent, auto-truncation)
+- **Cursor:** max_context = 200,000 (dynamic pruning)
+
+## Integration with Other Tools
+
+### Follow-up workflow
+
+```python
+# 1. Handshake first
+config = await agent_handshake(
+    model="sonnet",
+    client="claude-code",
+    languages="python,typescript",
+    project_goal="microservices API"
+)
+
+# 2. Load recommended skills
+await get_skill("fastapi_patterns")
+await get_skill("pragmatic_engineering")
+
+# 3. Search knowledge for project
+results = await semantic_search("microservices architecture patterns")
+
+# 4. Start coding with episodic memory
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Researched microservices patterns from MidOS knowledge",
+    success=True
+)
+```
+
+### Session resume (BL-074)
+
+If you've connected before, handshake checks for previous sessions:
+
+```python
+config = await agent_handshake(client="claude-code")
+# Returns:
+# ## Resume Available
+# Last session: sess_20260305_043521 (2h ago, 47 tool calls)
+# Call `where_was_i()` to get your full session summary.
+
+# Then:
+await where_was_i()  # Get full recap of previous session
+```
+
+## Related Tools
+
+- **[list_skills](/api/knowledge/list-skills)**: Discover available skills by stack
+- **[semantic_search](/api/knowledge/semantic-search)**: Vector search for project research  
+- **[episodic_search](/api/agent/episodic-search)**: Recall past agent experiences
+- **[hive_status](/api/system/hive-status)**: Check MidOS system health
+
+## Source Code
+
+Implemented in `/modules/mcp_server/midos_mcp.py:598-636`
+
+Uses:
+- `agent_profiles.py`: MODEL_CATALOG (31 models), CLIENT_CATALOG (12 clients)
+- `handshake_engine.py`: Config generation, context budget calculation  
+- `config/cli_profiles.json`: CLI-specific profiles with tool restrictions
+
+## Best Practices
+
+1. **Always call first**: Run `agent_handshake()` before any other MCP tool
+2. **Provide stack info**: Pass languages/frameworks for better skill recommendations  
+3. **Set project_goal**: Enables semantic search for relevant knowledge chunks
+4. **Check resume hint**: If shown, call `where_was_i()` to continue previous work
+5. **Follow suggestions**: Proactive recommendations are tailored to your gaps
+6. **Free tier testing**: Use `glm-4.5-air`, `qwen3-coder`, or `big-pickle` for zero-cost trials
+
+## Troubleshooting
+
+**Q: Model not detected?**  
+A: Pass `context_window=N` manually. Your model will work but get generic recommendations.
+
+**Q: Skills seem irrelevant?**  
+A: Add `languages` and `frameworks` parameters for stack-aware filtering.
+
+**Q: Response too large for my context?**  
+A: Pass accurate `context_window` — handshake will compress output for small contexts.
+
+**Q: Want tool X but it's not in my tier?**  
+A: Check `min_tier` in response. Community tier gets 17 tools, dev tier gets all tools.
+
+**Q: Client not recognized?**  
+A: You'll get generic defaults (read-only safe). Pass client name for tailored config.

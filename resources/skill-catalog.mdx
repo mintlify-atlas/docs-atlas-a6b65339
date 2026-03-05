@@ -1,0 +1,278 @@
+---
+title: "Skill Catalog"
+description: "Browse 200+ production-tested skill packs across 20+ technology stacks"
+icon: "books"
+---
+
+MidOS includes **200+ skill packs** covering modern frameworks, languages, databases, infrastructure, and AI/ML tools. Each skill is battle-tested, curated, and organized by technology stack.
+
+## What is a Skill Pack?
+
+Skill packs are **organized, actionable knowledge** (Layer 2 in the knowledge pipeline) that provide:
+
+- Production-tested patterns and best practices
+- Stack-specific implementation guides
+- Version-aware documentation (e.g., React 19, NestJS 11, Prisma 7)
+- Cross-validated against the corpus
+- Tagged with prerequisites and dependencies
+
+## How to Access Skills
+
+Use the `get_skill` tool via MCP:
+
+```python
+# Get a specific skill pack
+get_skill("nextjs")
+
+# List skills by stack
+list_skills(stack="react")
+
+# Search across all skills
+search_knowledge("FastAPI dependency injection")
+```
+
+## Skills by Category
+
+### Frontend Frameworks
+
+<CardGroup cols={2}>
+  <Card title="React" icon="react">
+    - **react** — React 19 comprehensive patterns
+    - **react_patterns_hooks** — React Hooks and modern patterns
+    - **nextjs** — Next.js 16 App Router patterns (PRO)
+  </Card>
+  
+  <Card title="Angular" icon="angular">
+    - **angular** — Angular 21 modern patterns
+  </Card>
+  
+  <Card title="Svelte" icon="bolt">
+    - **svelte-v5-patterns** — Svelte 5 runes and patterns
+  </Card>
+  
+  <Card title="Other Frameworks" icon="code">
+    - **astro_v5_patterns** — Astro v5 static site generation
+    - **remix_v2** — Remix v2 full-stack framework
+    - **htmx_interactivity** — HTMX hypermedia-driven interactivity
+  </Card>
+</CardGroup>
+
+### Backend Frameworks
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python">
+    - **fastapi** — FastAPI modern async patterns (Pydantic v2)
+    - **django_v5** — Django 5 patterns and best practices
+  </Card>
+  
+  <Card title="Node.js" icon="node-js">
+    - **nestjs_v11** — NestJS 11 enterprise patterns
+    - **trpc_end_to_end_typesafety** — tRPC end-to-end type safety
+    - **vercel_ai_sdk_streaming** — Vercel AI SDK streaming patterns
+  </Card>
+  
+  <Card title="PHP" icon="php">
+    - **laravel** — Laravel 12 modern patterns
+    - **symfony** — Symfony 8 enterprise patterns
+  </Card>
+  
+  <Card title="Java" icon="java">
+    - **java_spring** — Spring Boot modern patterns
+  </Card>
+</CardGroup>
+
+### Programming Languages
+
+<CardGroup cols={2}>
+  <Card title="TypeScript" icon="code">
+    - **typescript_mastery** — TypeScript advanced patterns 2026
+    - **effect_ts_patterns** — Effect-TS functional programming
+  </Card>
+  
+  <Card title="Rust" icon="rust">
+    - **rust_language** — Rust modern patterns
+    - **leptos_fullstack_rust** — Leptos full-stack Rust framework
+  </Card>
+  
+  <Card title="Go" icon="golang">
+    - **go_language** — Go modern patterns and idioms
+  </Card>
+</CardGroup>
+
+### Data & Databases
+
+<CardGroup cols={2}>
+  <Card title="SQL Databases" icon="database">
+    - **postgresql** — PostgreSQL advanced patterns
+    - **mysql** — MySQL optimization and patterns
+    - **sql_mastery** — SQL mastery and query optimization
+  </Card>
+  
+  <Card title="NoSQL & Search" icon="magnifying-glass">
+    - **mongodb_document_db** — MongoDB document patterns
+    - **redis_caching_patterns** — Redis caching strategies
+    - **elasticsearch_search** — Elasticsearch full-text search
+    - **lancedb_versioning** — LanceDB vector database patterns
+  </Card>
+  
+  <Card title="ORMs" icon="layer-group">
+    - **prisma_v7** — Prisma 7 type-safe ORM
+    - **drizzle_orm** — Drizzle ORM patterns
+  </Card>
+</CardGroup>
+
+### Infrastructure & DevOps
+
+<CardGroup cols={2}>
+  <Card title="Containers & Orchestration" icon="docker">
+    - **docker-containerization** — Docker best practices
+    - **kubernetes_orchestration** — Kubernetes container orchestration
+  </Card>
+  
+  <Card title="Infrastructure as Code" icon="code">
+    - **terraform_iac** — Terraform infrastructure patterns
+  </Card>
+</CardGroup>
+
+### AI/ML & Agent Patterns
+
+<CardGroup cols={2}>
+  <Card title="Model Training" icon="brain">
+    - **lora_qlora_training** — LoRA/QLoRA fine-tuning patterns
+  </Card>
+  
+  <Card title="Agent Orchestration" icon="robot">
+    - **GOOGLE_ADK_A2A_IDP_MULTIAGENT** — Google ADK A2A multi-agent patterns
+    - **LEGAL_GUARDRAILS_FOR_AGENTS** — Legal guardrails for AI agents
+  </Card>
+  
+  <Card title="Model APIs" icon="plug">
+    - **gemini-model-capabilities** — Gemini model capabilities
+    - **github_models_api** — GitHub Models API integration
+  </Card>
+</CardGroup>
+
+### Architecture & Design Patterns
+
+<CardGroup cols={2}>
+  <Card title="System Design" icon="diagram-project">
+    - **domain_driven_design** — Domain-Driven Design patterns
+    - **microservices_architecture** — Microservices patterns
+    - **event_driven_architecture** — Event-driven architecture
+  </Card>
+  
+  <Card title="API Design" icon="cloud">
+    - **graphql_api_design** — GraphQL API design patterns
+  </Card>
+</CardGroup>
+
+### Testing & Quality
+
+<CardGroup cols={2}>
+  <Card title="Testing" icon="vial">
+    - **spec_driven_dev** — Specification-driven development
+    - **evidently_drift_detection** — ML model drift detection
+  </Card>
+  
+  <Card title="Logging" icon="file-lines">
+    - **structlog_production_logging** — Structured logging with structlog
+  </Card>
+</CardGroup>
+
+### Desktop & Mobile
+
+<CardGroup cols={2}>
+  <Card title="Desktop Apps" icon="desktop">
+    - **tauri_desktop_apps** — Tauri cross-platform desktop apps
+  </Card>
+</CardGroup>
+
+### Specialized Skills
+
+<CardGroup cols={2}>
+  <Card title="UI/Styling" icon="palette">
+    - **tailwindcss** — Tailwind CSS v4 utility patterns
+  </Card>
+  
+  <Card title="Tooling" icon="wrench">
+    - **bun_runtime** — Bun JavaScript runtime
+    - **deno_v2_patterns** — Deno v2 patterns
+    - **wezterm_setup** — WezTerm terminal setup
+    - **powershell7_terminal_setup** — PowerShell 7 terminal
+  </Card>
+  
+  <Card title="Integration & APIs" icon="plug">
+    - **mercadopago_integration** — MercadoPago payment integration
+    - **powerbi_integration** — Power BI data visualization
+    - **obs_automation** — OBS Studio automation
+  </Card>
+  
+  <Card title="NLP & RAG" icon="book-open">
+    - **SKILL_TEXT_CHUNKING** — Text chunking for RAG
+    - **SKILL_JINA_AI** — Jina AI embeddings and search
+    - **domain_nlp_glossary_rag** — Domain NLP glossary for RAG
+  </Card>
+  
+  <Card title="Embedded Systems" icon="microchip">
+    - **avr_embedded** — AVR embedded systems
+    - **avr_firmware_testing** — AVR firmware testing
+  </Card>
+  
+  <Card title="Content Generation" icon="wand-magic-sparkles">
+    - **anime_character_designer** — Anime character design
+    - **anime_scene_director** — Anime scene direction
+    - **anime_story_architect** — Anime story architecture
+    - **anime_prompt_translator** — Anime prompt translation
+    - **anime_image_generation_apis** — Anime image generation APIs
+  </Card>
+  
+  <Card title="Audio/Video" icon="video">
+    - **whisperx_spanish_diarization** — WhisperX Spanish speaker diarization
+  </Card>
+</CardGroup>
+
+### Meta Skills
+
+<CardGroup cols={2}>
+  <Card title="Agent Operations" icon="gears">
+    - **tool_selection_decision_tree** — Tool selection strategy
+    - **token_efficiency_free_models** — Token optimization for free models
+    - **free_tier_fallbacks** — Free tier fallback strategies
+    - **stack_guardian** — Stack validation and guardrails
+    - **feature_integration_lifecycle** — Feature integration workflow
+  </Card>
+  
+  <Card title="Quick References" icon="book">
+    - **TECH_QUICK_REFERENCE** — Cross-stack quick reference
+    - **SUPABASE_SQL_MIGRATIONS_STANDARD** — Supabase SQL migration patterns
+    - **guia_seo_pricing_web_dev_2026** — SEO pricing guide 2026
+  </Card>
+</CardGroup>
+
+## Total Skills
+
+<Info>
+  **200+ skill packs** and growing. New skills are added weekly based on community demand and production validation.
+</Info>
+
+## Quality Guarantees
+
+Every skill in the catalog:
+
+- Passes 5-layer quality validation
+- Is cross-validated against the corpus
+- Includes version information (e.g., "React 19", "Prisma 7")
+- Has been tested in production environments
+- Is myth-busted with empirical evidence
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="EUREKA Catalog" icon="lightbulb" href="/resources/eureka-catalog">
+    Explore validated breakthrough discoveries
+  </Card>
+  
+  <Card title="Truth Patches" icon="shield-check" href="/resources/truth-patches">
+    Browse empirically verified corrections
+  </Card>
+</CardGroup>

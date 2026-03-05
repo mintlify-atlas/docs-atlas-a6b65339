@@ -1,0 +1,601 @@
+---
+title: "episodic_store"
+description: "Store a new episodic memory for future agent learning"
+---
+
+# episodic_store
+
+Store a new episodic memory (reflexion) for future learning. Records your task experiences so you can recall them later with `episodic_search`.
+
+## Overview
+
+Episodic memory is how agents learn from experience. Every time you complete a task—whether successful or failed—you can store a reflexion that includes:
+
+- **What you did** (task type + input)
+- **How you approached it** (implicit in your workflow)
+- **Whether it worked** (success flag)
+- **Context for future recall** (embedded as vector)
+
+**Why store reflexions?**
+- Learn from mistakes: "I tried X, it failed, learned Y"
+- Reuse successful patterns: "This approach worked for similar task"
+- Build institutional knowledge: "Here's how we solve Z"
+- Track progress: "Completed 15 DEBUG tasks this week"
+
+## Function Signature
+
+```python
+async def episodic_store(
+    task_type: str,
+    input_preview: str,
+    success: bool = True
+) -> str
+```
+
+## Parameters
+
+### `task_type` (required)
+
+**Type:** `str`
+
+Type of task you performed. Must be one of:
+
+- **`"CODE"`**: Implementation, refactoring, adding features
+- **`"RESEARCH"`**: Investigating solutions, reading docs, exploring APIs
+- **`"DEBUG"`**: Troubleshooting errors, fixing bugs, diagnosing issues
+- **`"REVIEW"`**: Code review, architecture review, audits, retrospectives
+
+**Why it matters:**
+- Groups related experiences together
+- Helps with pattern recognition ("I've debugged 12 timeout issues")
+- Enables task-specific learning ("My CODE tasks succeed 85% of the time")
+
+**Examples:**
+```python
+task_type="CODE"      # Implementing OAuth2 flow
+task_type="RESEARCH"  # Reading FastAPI websocket docs
+task_type="DEBUG"     # Fixing memory leak
+task_type="REVIEW"    # Daily retrospective
+```
+
+### `input_preview` (required)
+
+**Type:** `str`
+
+Brief description of what you did and the context. This is what gets embedded for vector search.
+
+**Best practices:**
+
+1. **Be specific**: Include technical terms, framework names, error types
+   - Good: `"Implemented JWT refresh token rotation with Redis blacklist"`
+   - Bad: `"Added auth"`
+
+2. **Include context**: What, where, why
+   - Good: `"Fixed React useEffect memory leak by adding cleanup function"`
+   - Bad: `"Fixed bug"`
+
+3. **Document approach** (if non-obvious):
+   - Good: `"Debugged PostgreSQL deadlock using pgbadger log analysis, found conflicting indexes"`
+   - Bad: `"Fixed database issue"`
+
+4. **Reference technologies**:
+   - Good: `"Researched WebSocket scaling patterns for 10K concurrent connections"`
+   - Bad: `"Looked up scaling stuff"`
+
+5. **Add learnings** (especially for failures):
+   - Good: `"Tried async queue processing without rate limiting → API 429 errors. Need semaphore."`
+   - Bad: `"Queue didn't work"`
+
+**Length:** 20-500 characters recommended (embeddings work best with concise, dense text)
+
+**Examples:**
+
+```python
+# CODE examples
+input_preview="Implemented FastAPI middleware for request logging with correlation IDs"
+input_preview="Refactored React form validation to use Zod schema with TypeScript inference"
+input_preview="Added Redis caching layer to user profile endpoint, reduced latency 80%"
+
+# RESEARCH examples
+input_preview="Researched PostgreSQL connection pooling: pgBouncer vs Odyssey vs built-in"
+input_preview="Explored gRPC vs REST for microservices communication, chose gRPC for internal"
+input_preview="Read Docker multi-stage build docs, reduced image size from 1.2GB to 180MB"
+
+# DEBUG examples  
+input_preview="Fixed CORS preflight failing for PUT requests, needed Access-Control-Allow-Methods"
+input_preview="Debugged Celery task not retrying, forgot @app.task(bind=True) for self.retry()"
+input_preview="Resolved Next.js hydration mismatch, server/client date formatting difference"
+
+# REVIEW examples
+input_preview="Code review: Identified N+1 query in user dashboard, suggested dataloader pattern"
+input_preview="Architecture review: Redis pub/sub bottleneck at 50K msg/sec, need Kafka"
+input_preview="Weekly retro: Completed auth refactor, 3 bugs fixed, learned PKCE flow"
+```
+
+### `success` (optional)
+
+**Type:** `bool`  
+**Default:** `True`
+
+Whether the task succeeded or failed.
+
+**When to use `success=False`:**
+- Approach didn't work (but you learned why)
+- Task abandoned (documented dead end)
+- Error couldn't be resolved (need different strategy)
+
+**When to use `success=True`:**
+- Task completed successfully
+- Problem solved (even if took multiple attempts)
+- Research yielded useful findings
+
+**Both are valuable:**
+- Successes: Reusable patterns, proven approaches
+- Failures: Anti-patterns, things to avoid
+
+**Examples:**
+
+```python
+# Successful task
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Fixed PostgreSQL connection timeout, increased pool size to 20",
+    success=True
+)
+
+# Failed attempt (learning experience)
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Tried increasing connection pool to 50 → crashed with OOM. Pool too large.",
+    success=False
+)
+
+# Successful research (even if no code written)
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Compared Celery vs RQ vs Dramatiq for async tasks, chose RQ for simplicity",
+    success=True
+)
+
+# Failed research (no good solution found)
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Looked for Python library to parse .docx without Office deps → none reliable",
+    success=False
+)
+```
+
+## Response Format
+
+Returns a plain text confirmation:
+
+```
+Episodic memory stored: {task_type}
+Success: {stored}
+```
+
+**Example responses:**
+
+```
+Episodic memory stored: CODE
+Success: True
+```
+
+```
+Episodic memory stored: DEBUG
+Success: True
+```
+
+If storage fails (rare):
+```
+Episodic store error: {error_message}
+```
+
+## Example Usage
+
+### After completing a feature
+
+```python
+# Just implemented a feature
+await episodic_store(
+    task_type="CODE",
+    input_preview="Implemented real-time notifications with WebSocket and Redis pub/sub",
+    success=True
+)
+
+# Later, when working on similar feature
+memories = await episodic_search("WebSocket Redis notifications")
+# Returns your stored approach
+```
+
+### After debugging
+
+```python
+# Failed attempt 1
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Memory leak in FastAPI background task, tried gc.collect() → didn't help",
+    success=False
+)
+
+# Failed attempt 2  
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Tried weakref for cache → still leaking, issue is SQLAlchemy session not closed",
+    success=False
+)
+
+# Success!
+await episodic_store(
+    task_type="DEBUG",
+    input_preview="Fixed memory leak: SQLAlchemy session.close() after each background task",
+    success=True
+)
+
+# Future recall shows progression: 2 failures, 1 success, final approach
+```
+
+### After research session
+
+```python
+# Researched a topic
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Explored FastAPI testing strategies: TestClient vs httpx.AsyncClient vs pytest-asyncio",
+    success=True
+)
+
+# Stored decision
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="Decision: Use pytest-asyncio with httpx.AsyncClient for real async testing",
+    success=True
+)
+
+# Later, when testing another project
+memories = await episodic_search("FastAPI testing async")
+# Recalls your research and decision
+```
+
+### Daily retrospective
+
+```python
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Daily summary: Fixed CORS bug (30min), added user auth middleware (2h), researched Redis caching (1h). Auth took longer than expected due to JWT validation complexity.",
+    success=True
+)
+
+# Weekly retrospective
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Week 12 retro: Completed auth refactor, deployed to staging, found 3 edge cases in production logs. Need better integration tests before deploy.",
+    success=True
+)
+```
+
+### Documenting anti-patterns
+
+```python
+# Found a bad pattern
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Anti-pattern: Using asyncio.gather() without timeout → one slow task blocks all. Always use wait_for() with timeout.",
+    success=True
+)
+
+# Later, during code review
+memories = await episodic_search("asyncio gather timeout blocking")
+# Recalls the anti-pattern warning
+```
+
+### Project milestones
+
+```python
+# Project start
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Project kickoff: Building e-commerce API with FastAPI, PostgreSQL, Redis, Celery. Key challenges: payment gateway integration, inventory sync.",
+    success=True
+)
+
+# Mid-project
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Milestone: Payment gateway integrated (Stripe), webhook validation working. Learned: always verify webhook signatures, use idempotency keys.",
+    success=True
+)
+
+# Project end
+await episodic_store(
+    task_type="REVIEW",
+    input_preview="Project complete: E-commerce API deployed, 99.5% uptime first month. Biggest win: Redis caching reduced DB load 70%. Biggest challenge: race conditions in inventory, solved with PostgreSQL row-level locks.",
+    success=True
+)
+```
+
+## Storage Architecture
+
+### File structure
+
+```
+~/.midos/memory/episodic/
+├── reflexions.jsonl          # Append-only reflexion log
+├── embeddings.lance/         # LanceDB vector index
+└── metadata.json             # Schema version, stats
+```
+
+### Reflexion schema
+
+Each stored reflexion is appended to `reflexions.jsonl` as:
+
+```json
+{
+  "timestamp": "2026-03-05T04:35:21.123Z",
+  "task_type": "CODE",
+  "input_preview": "Implemented JWT refresh token rotation with Redis blacklist",
+  "success": true,
+  "provider": "mcp_server",
+  "session_id": "sess_20260305_043521",
+  "vector": [0.123, -0.456, 0.789, ...],  // 768-dim embedding
+  "metadata": {
+    "client": "claude-code",
+    "model": "claude-sonnet-4-5"
+  }
+}
+```
+
+**Fields:**
+- `timestamp`: ISO 8601 UTC timestamp
+- `task_type`: CODE | RESEARCH | DEBUG | REVIEW
+- `input_preview`: Your description (stored verbatim)
+- `success`: Boolean flag
+- `provider`: Always `"mcp_server"` (from episodic_store caller)
+- `session_id`: Current MCP session (if available)
+- `vector`: Embedding of input_preview (768-dim float array)
+- `metadata`: Optional context (client, model, etc.)
+
+### Vector embedding
+
+When you call `episodic_store`:
+
+1. **Text preprocessing**: `input_preview` → cleaned text
+2. **Embedding**: Text → 768-dim vector (same model as semantic search)
+3. **Storage**: Reflexion appended to `reflexions.jsonl`
+4. **Indexing**: Vector added to LanceDB index for fast search
+
+**Embedding model:** Uses same configuration as `semantic_search` (Gemini or custom)
+
+### Persistence
+
+- **Durable**: Written to disk immediately (no in-memory buffer)
+- **Append-only**: Never overwrites (safe for concurrent agents)
+- **Portable**: JSONL format, easy to backup/migrate
+- **Searchable**: Indexed automatically on write
+
+## Integration Patterns
+
+### Task wrapper pattern
+
+```python
+async def tracked_task(task_type: str, description: str, func):
+    """Wrapper that auto-stores episodic memory."""
+    try:
+        result = await func()
+        await episodic_store(
+            task_type=task_type,
+            input_preview=f"{description} → Success",
+            success=True
+        )
+        return result
+    except Exception as e:
+        await episodic_store(
+            task_type=task_type,
+            input_preview=f"{description} → Failed: {str(e)[:100]}",
+            success=False
+        )
+        raise
+
+# Usage
+await tracked_task(
+    task_type="CODE",
+    description="Implement user registration endpoint",
+    func=lambda: implement_registration()
+)
+```
+
+### Progressive problem solving
+
+```python
+# Attempt 1
+try:
+    solution_a()
+    await episodic_store(
+        task_type="DEBUG",
+        input_preview="Fixed bug with approach A: increased timeout",
+        success=True
+    )
+except:
+    await episodic_store(
+        task_type="DEBUG",
+        input_preview="Approach A failed (timeout increase). Need different strategy.",
+        success=False
+    )
+    
+    # Search for alternatives
+    memories = await episodic_search("similar bug timeout")
+    
+    # Attempt 2 based on past experience
+    solution_b()
+    await episodic_store(
+        task_type="DEBUG",
+        input_preview="Fixed bug with approach B: connection pooling",
+        success=True
+    )
+```
+
+### Learning from failure
+
+```python
+# Document what DIDN'T work
+await episodic_store(
+    task_type="CODE",
+    input_preview="Tried using threading for async I/O in FastAPI → bad performance. Use async/await instead.",
+    success=False
+)
+
+# Later, when tempted to try threading again
+memories = await episodic_search("threading FastAPI async")
+# Returns your past failure, prevents repeating mistake
+```
+
+### Team knowledge sharing
+
+```python
+# You discover a solution
+await episodic_store(
+    task_type="RESEARCH",
+    input_preview="PostgreSQL LISTEN/NOTIFY vs polling for real-time updates. LISTEN/NOTIFY is 10x more efficient, requires persistent connection.",
+    success=True
+)
+
+# Teammate searches (if shared episodic memory)
+memories = await episodic_search("PostgreSQL real-time updates")
+# Finds your research, doesn't repeat investigation
+```
+
+## Best Practices
+
+### When to store
+
+**Always store:**
+- After completing a feature
+- After fixing a bug (especially tricky ones)
+- After research session (even if no code written)
+- After discovering an anti-pattern
+- At project milestones
+
+**Consider storing:**
+- After failed attempts (if you learned something)
+- After code reviews (patterns observed)
+- At end of day/week (retrospectives)
+
+**Don't store:**
+- Trivial tasks ("fixed typo", "updated comment")
+- Work-in-progress (wait until complete)
+- Generic notes ("need to refactor") — be specific
+
+### Writing good input_preview
+
+**Include:**
+- Technology names: FastAPI, PostgreSQL, React, Redis
+- Task specifics: "JWT validation", "connection pooling", "WebSocket keepalive"
+- Approach (if non-obvious): "Used exponential backoff", "Implemented circuit breaker"
+- Outcome: "Reduced latency 80%", "Fixed memory leak", "Discovered X causes Y"
+
+**Avoid:**
+- Vague descriptions: "worked on auth", "fixed bug", "did stuff"
+- File paths without context: "Updated server.py line 42"
+- Pronouns: "this", "that", "it" (be explicit)
+- Internal jargon: "fixed the thing" (won't search well)
+
+### Success vs failure
+
+**Both are valuable:**
+- **Success**: Proven patterns to reuse
+- **Failure**: Mistakes to avoid, dead ends to skip
+
+**Track iterations:**
+- Failed attempt 1 → stores anti-pattern
+- Failed attempt 2 → stores another anti-pattern  
+- Success → stores winning approach
+- Future search returns all three, shows progression
+
+## Error Handling
+
+### Common errors
+
+```python
+# Missing task_type
+await episodic_store(
+    task_type="",
+    input_preview="test"
+)
+# Returns: "Episodic store error: task_type required"
+
+# Invalid task_type
+await episodic_store(
+    task_type="INVALID",
+    input_preview="test"
+)
+# Returns: "Episodic store error: task_type must be CODE, RESEARCH, DEBUG, or REVIEW"
+
+# Empty input_preview
+await episodic_store(
+    task_type="CODE",
+    input_preview=""
+)
+# Returns: "Episodic store error: input_preview required"
+
+# Embedding service unavailable
+await episodic_store(
+    task_type="CODE",
+    input_preview="test"
+)
+# Returns: "Episodic store error: embedding generation failed"
+```
+
+### Graceful degradation
+
+If `episodic_store` fails:
+1. Check if `episodic_memory.py` is available (imported from `hooks/`)
+2. Verify `~/.midos/memory/episodic/` directory is writable
+3. Test embedding service with `semantic_search`
+4. Continue work (storage failure is non-critical)
+5. Retry storage later if possible
+
+## Related Tools
+
+- **[episodic_search](/api/agent/episodic-search)**: Search stored reflexions for recall
+- **[agent_handshake](/api/agent/agent-handshake)**: Initial setup (mentions episodic tools)
+- **[memory_stats](/api/system/memory-stats)**: Check storage health and stats
+
+## Source Code
+
+Implemented in `/modules/mcp_server/midos_mcp.py:534-556`
+
+Uses:
+- `hooks/episodic_memory.py`: `store_reflexion(task_type, input_preview, success, provider)`
+- LanceDB for vector storage
+- Same embedding model as semantic search
+
+## Privacy & Security
+
+- **Local storage**: Never sent to MidOS servers
+- **Your data**: Only you (and your team, if shared) can access
+- **No telemetry**: Reflexion content not collected by MidOS
+- **Deletion**: Manual (edit `reflexions.jsonl`, rebuild index)
+- **Backup**: Copy `~/.midos/memory/episodic/` directory
+
+## Performance
+
+- **Latency**: 20-100ms to store (depends on embedding speed)
+- **Throughput**: 50+ stores/sec
+- **Storage**: ~2KB per reflexion (including 768-dim vector)
+- **Index size**: ~10MB per 1000 reflexions
+
+## Limitations
+
+- **No editing**: Can't edit stored reflexions (append-only)
+- **No deletion**: Manual removal only (no delete API)
+- **No organization**: No folders/projects (use tags in input_preview)
+- **No search within reflexion**: Only input_preview is embedded (not approach/outcome)
+
+## Future Enhancements
+
+- **Structured reflexions**: Separate fields for approach, outcome, reflection
+- **Automatic tagging**: Extract entities (files, errors, frameworks)
+- **Session linking**: "This reflexion is related to that one"
+- **Project grouping**: Tag reflexions by project
+- **Export**: `episodic_export(format='json|csv|md')`
+- **Statistics**: `episodic_stats()` for success rates, task type distribution

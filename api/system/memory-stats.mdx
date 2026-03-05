@@ -1,0 +1,144 @@
+---
+title: 'memory_stats'
+description: 'Get statistics about the MidOS memory system and LanceDB vector store'
+---
+
+## Function Signature
+
+```python
+async def memory_stats() -> str
+```
+
+## Description
+
+Returns detailed statistics about the MidOS memory system, including LanceDB vector store status, embedding engine information, and total chunk count.
+
+This tool provides insight into:
+- Vector store operational status
+- Embedding model and hybrid search configuration
+- Total number of indexed chunks
+- Storage table name
+
+Use this to monitor the health and size of your semantic search infrastructure.
+
+## When to Use
+
+Use `memory_stats` when you need to:
+- **Verify vector store is online** - Check before running semantic searches
+- **Monitor vector store growth** - Track indexing progress over time
+- **Debug search issues** - Confirm the memory system is operational
+- **Understand search configuration** - See which embedding model and search strategy is active
+- **Optimize knowledge base** - Monitor chunk count for decay management
+
+This is particularly useful for:
+- System health checks before semantic operations
+- Debugging semantic search failures
+- Monitoring knowledge base scalability
+- Understanding the hybrid search architecture
+
+## Parameters
+
+This tool takes no parameters.
+
+## Error Handling
+
+Raises a `ToolError` if `hive_commons` module is not available. This typically means:
+- The vector store dependencies are not installed
+- LanceDB is not configured
+- The memory system is unavailable
+
+## Response Structure
+
+Returns a JSON string with the following structure:
+
+<ResponseField name="status" type="string" required>
+  Operational status of the vector store. Typically `"online"` when healthy.
+</ResponseField>
+
+<ResponseField name="engine" type="string" required>
+  Vector store engine description, including:
+  - Database technology (LanceDB)
+  - Embedding model (e.g., `gemini-embedding-001`)
+  - Search strategy (e.g., BM25 RRF + decay)
+  - Hybrid search configuration
+</ResponseField>
+
+<ResponseField name="table" type="string" required>
+  Name of the LanceDB table storing the vectors
+</ResponseField>
+
+<ResponseField name="total_chunks" type="integer" required>
+  Total number of chunks indexed in the vector store. This count reflects all embedded knowledge available for semantic search.
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "status": "online",
+  "engine": "lancedb_hybrid (gemini-embedding-001 + BM25 RRF + decay)",
+  "table": "midos_chunks",
+  "total_chunks": 32847
+}
+```
+
+## Example Usage
+
+```python
+# Check vector store before semantic search
+try:
+    stats = await memory_stats()
+    stats_data = json.loads(stats)
+    
+    if stats_data["status"] == "online":
+        print(f"Vector store ready: {stats_data['total_chunks']:,} chunks")
+        results = await semantic_search("react hooks", top_k=10)
+    else:
+        print("Vector store not available")
+except ToolError as e:
+    print(f"Memory system unavailable: {e}")
+
+# Monitor vector store growth
+import json
+
+stats = await memory_stats()
+data = json.loads(stats)
+
+print(f"Status: {data['status']}")
+print(f"Engine: {data['engine']}")
+print(f"Total vectors: {data['total_chunks']:,}")
+print(f"Storage table: {data['table']}")
+```
+
+## Understanding the Response
+
+### Status Field
+- `online` - Vector store is healthy and ready for queries
+- `offline` - Vector store is not accessible
+- `error` - Vector store encountered an error
+
+### Engine Field
+The engine description reveals the search architecture:
+- **lancedb_hybrid** - Using LanceDB with hybrid search
+- **gemini-embedding-001** - Google's Gemini embedding model
+- **BM25 RRF** - BM25 keyword search with Reciprocal Rank Fusion
+- **decay** - Temporal decay scoring for relevance
+
+This means semantic searches use:
+1. Dense vector search via Gemini embeddings
+2. Sparse keyword search via BM25
+3. Hybrid fusion via RRF (Reciprocal Rank Fusion)
+4. Temporal decay to prioritize recent knowledge
+
+### Total Chunks
+This count represents all knowledge indexed for semantic search across:
+- L1 chunks (raw knowledge)
+- L2 skills (structured expertise)
+- L3 truth patches (corrections)
+- L4 EUREKA (validated improvements)
+
+## Related Tools
+
+- [`hive_status`](/api/system/hive-status) - Overall system health and file counts
+- [`project_status`](/api/system/project-status) - Comprehensive dashboard with vector store status
+- [`semantic_search`](/api/knowledge/semantic-search) - Perform vector-based semantic searches

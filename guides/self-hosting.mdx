@@ -1,0 +1,832 @@
+---
+title: "Self-Hosting"
+description: "Deploy MidOS in production with stdio, HTTP, or Docker"
+---
+
+Self-hosting MidOS gives you full control over knowledge, customization, and infrastructure. This guide covers local development, production deployment, and Docker orchestration.
+
+## Why Self-Host?
+
+<CardGroup cols={2}>
+  <Card title="Data Privacy" icon="lock">
+    Keep your knowledge base and queries on your infrastructure.
+  </Card>
+  <Card title="Customization" icon="wrench">
+    Add custom skills, modify search algorithms, tune embeddings.
+  </Card>
+  <Card title="Offline Use" icon="wifi">
+    Run without internet (vector store is local).
+  </Card>
+  <Card title="Cost Control" icon="dollar-sign">
+    No per-query costs, pay only for infrastructure.
+  </Card>
+</CardGroup>
+
+## Requirements
+
+### System Requirements
+
+- **Python**: 3.11 or higher
+- **Memory**: 4GB minimum, 8GB recommended (for LanceDB vector store)
+- **Disk**: 2GB for knowledge base + vectors
+- **OS**: Linux, macOS, or Windows (WSL recommended)
+
+### API Keys
+
+For semantic search and embeddings:
+
+- **Gemini API Key**: Free at [aistudio.google.com](https://aistudio.google.com/app/apikey)
+  - Used for: `semantic_search`, `hybrid_search`, embeddings
+  - Quota: 1,500 requests/day (free tier)
+  - Optional if you only use keyword search
+
+<Tip>
+Keyword search (`search_knowledge`) works without any API keys.
+</Tip>
+
+## Quick Start (Local Development)
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/MidOSresearch/midos.git
+    cd midos
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    # Install main package
+    pip install -e .
+
+    # Install hive_commons (shared library)
+    pip install -e hive_commons/
+
+    # Verify installation
+    python -m modules.mcp_server.midos_mcp --help
+    ```
+  </Step>
+
+  <Step title="Configure environment">
+    Copy `.env.example` to `.env` and add your keys:
+
+    ```bash .env
+    # Required for semantic search
+    GEMINI_API_KEY=your_gemini_key_here
+    GOOGLE_API_KEY=your_google_key_here  # Same as GEMINI_API_KEY
+
+    # Optional: Notifications
+    GCHAT_WEBHOOK_URL=your_webhook_url
+
+    # Optional: Database (uses SQLite by default)
+    DATABASE_URL=sqlite:///./orchestrator.db
+    ```
+
+    <Warning>
+    Never commit `.env` to Git. It's in `.gitignore` by default.
+    </Warning>
+  </Step>
+
+  <Step title="Run the server">
+    Start in HTTP mode:
+
+    ```bash
+    python -m modules.mcp_server.midos_mcp --http --port 8419
+    ```
+
+    You should see:
+    ```
+    Starting Midos MCP Server (FastMCP)...
+    Knowledge dir: /path/to/midos/knowledge
+    Skills: 203 files
+    Protocols: 15 files
+    Transport: streamable-http on 0.0.0.0:8419
+    INFO:     Started server process
+    INFO:     Uvicorn running on http://0.0.0.0:8419
+    ```
+  </Step>
+
+  <Step title="Test the server">
+    Health check:
+
+    ```bash
+    curl http://localhost:8419/health
+    ```
+
+    Expected response:
+    ```json
+    {
+      "status": "ok",
+      "server": "midos",
+      "uptime_seconds": 3.7,
+      "timestamp": "2026-03-05T12:34:56Z"
+    }
+    ```
+  </Step>
+</Steps>
+
+## Transport Modes
+
+MidOS supports two transports: **stdio** (local) and **HTTP** (network).
+
+### stdio Transport
+
+Best for: Claude Desktop, single-user local use
+
+```bash
+# Run in stdio mode (default)
+python -m modules.mcp_server.midos_mcp
+```
+
+**MCP Client Config:**
+
+<CodeGroup>
+```json Claude Desktop (macOS)
+{
+  "mcpServers": {
+    "midos": {
+      "command": "python",
+      "args": ["-m", "modules.mcp_server.midos_mcp"],
+      "cwd": "/Users/you/midos",
+      "env": {
+        "GEMINI_API_KEY": "your_key_here"
+      }
+    }
+  }
+}
+```
+
+```json Claude Desktop (Windows)
+{
+  "mcpServers": {
+    "midos": {
+      "command": "python",
+      "args": ["-m", "modules.mcp_server.midos_mcp"],
+      "cwd": "C:\\Users\\you\\midos",
+      "env": {
+        "GEMINI_API_KEY": "your_key_here"
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+**Pros:**
+- No network configuration
+- Automatic process lifecycle
+- Environment variables from client
+
+**Cons:**
+- Single client only
+- Can't share across machines
+- Harder to debug
+
+### HTTP Transport
+
+Best for: Multi-user, production, remote access
+
+```bash
+# Run in HTTP mode
+python -m modules.mcp_server.midos_mcp --http --port 8419
+
+# Custom host and port
+python -m modules.mcp_server.midos_mcp --http --host 127.0.0.1 --port 9000
+```
+
+**MCP Client Config:**
+
+```json
+{
+  "mcpServers": {
+    "midos": {
+      "url": "http://localhost:8419/mcp"
+    }
+  }
+}
+```
+
+**Pros:**
+- Multiple clients supported
+- Remote access (change `0.0.0.0` to allow external)
+- Easy to monitor and debug
+- Health check endpoint (`/health`)
+
+**Cons:**
+- Requires port management
+- Needs manual process management (or systemd/Docker)
+
+## Production Deployment
+
+### Using systemd (Linux)
+
+Create a systemd service for automatic startup:
+
+<Steps>
+  <Step title="Create service file">
+    ```bash
+    sudo nano /etc/systemd/system/midos.service
+    ```
+
+    ```ini /etc/systemd/system/midos.service
+    [Unit]
+    Description=MidOS MCP Server
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=midos
+    WorkingDirectory=/opt/midos
+    Environment="PATH=/opt/midos/venv/bin:/usr/bin"
+    EnvironmentFile=/opt/midos/.env
+    ExecStart=/opt/midos/venv/bin/python -m modules.mcp_server.midos_mcp --http --port 8419
+    Restart=always
+    RestartSec=10
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+  </Step>
+
+  <Step title="Enable and start service">
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl enable midos.service
+    sudo systemctl start midos.service
+    ```
+  </Step>
+
+  <Step title="Check status">
+    ```bash
+    sudo systemctl status midos.service
+    ```
+
+    Expected output:
+    ```
+    ● midos.service - MidOS MCP Server
+       Loaded: loaded (/etc/systemd/system/midos.service; enabled)
+       Active: active (running) since ...
+    ```
+  </Step>
+
+  <Step title="View logs">
+    ```bash
+    sudo journalctl -u midos.service -f
+    ```
+  </Step>
+</Steps>
+
+### Using Docker
+
+Containerize MidOS for portable deployment:
+
+<Steps>
+  <Step title="Build the image">
+    ```bash
+    docker build -t midos-mcp:latest .
+    ```
+
+    The included `Dockerfile` (source: `~/workspace/source/Dockerfile:1`) builds a web frontend. For the MCP server, use:
+
+    ```dockerfile Dockerfile.mcp
+    FROM python:3.11-slim
+
+    WORKDIR /app
+
+    # Install dependencies
+    COPY pyproject.toml ./
+    COPY hive_commons/ ./hive_commons/
+    RUN pip install -e . && pip install -e hive_commons/
+
+    # Copy source
+    COPY . .
+
+    # Health check
+    HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+        CMD curl -f http://localhost:8419/health || exit 1
+
+    EXPOSE 8419
+
+    CMD ["python", "-m", "modules.mcp_server.midos_mcp", "--http", "--port", "8419"]
+    ```
+
+    Build:
+    ```bash
+    docker build -f Dockerfile.mcp -t midos-mcp:latest .
+    ```
+  </Step>
+
+  <Step title="Run the container">
+    ```bash
+    docker run -d \
+      --name midos \
+      -p 8419:8419 \
+      -e GEMINI_API_KEY=your_key_here \
+      -v $(pwd)/knowledge:/app/knowledge \
+      -v $(pwd)/memory:/app/memory \
+      --restart unless-stopped \
+      midos-mcp:latest
+    ```
+
+    <Tip>
+    Mount volumes for knowledge and memory to persist data across container restarts.
+    </Tip>
+  </Step>
+
+  <Step title="Check logs">
+    ```bash
+    docker logs -f midos
+    ```
+  </Step>
+
+  <Step title="Test health">
+    ```bash
+    curl http://localhost:8419/health
+    ```
+  </Step>
+</Steps>
+
+### Using Docker Compose
+
+For complex setups with reverse proxy:
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  midos:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    image: midos-mcp:latest
+    container_name: midos
+    restart: unless-stopped
+    ports:
+      - "8419:8419"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./knowledge:/app/knowledge
+      - ./memory:/app/memory
+      - ./synapse:/app/synapse
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8419/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nginx:
+    image: nginx:alpine
+    container_name: midos-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - midos
+```
+
+**Start stack:**
+
+```bash
+docker-compose up -d
+```
+
+## Environment Configuration
+
+### Required Variables
+
+```bash .env
+# Gemini API (for semantic search)
+GEMINI_API_KEY=your_gemini_key
+GOOGLE_API_KEY=your_google_key  # Same as GEMINI_API_KEY
+```
+
+### Optional Variables
+
+```bash .env
+# Database (default: SQLite)
+DATABASE_URL=sqlite:///./orchestrator.db
+# Or PostgreSQL for production:
+# DATABASE_URL=postgresql://user:pass@localhost:5432/midos
+
+# Google Chat notifications
+GCHAT_WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/...
+
+# LLM Providers (for advanced features)
+LM_STUDIO_API_BASE=http://localhost:11434
+OPENROUTER_API_KEY=your_openrouter_key
+
+# GitHub (for knowledge ingestion)
+GITHUB_TOKEN=your_github_token
+
+# Discord (for community integration)
+DISCORD_TOKEN=your_discord_user_token
+```
+
+<Warning>
+Discord token is a **user token**, not a bot token. Leaking this gives full access to your Discord account. Only use for trusted scripts.
+</Warning>
+
+## Health Checks
+
+MidOS exposes two health endpoints:
+
+### Liveness Probe
+
+Checks if the process is alive:
+
+```bash
+curl http://localhost:8419/health
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "server": "midos",
+  "uptime_seconds": 142.7,
+  "timestamp": "2026-03-05T12:34:56Z"
+}
+```
+
+**Use for:** Kubernetes liveness probe, Docker healthcheck
+
+### Readiness Probe
+
+Checks if all dependencies are functional:
+
+```bash
+curl http://localhost:8419/health/ready
+```
+
+**Response:**
+```json
+{
+  "status": "ready",
+  "server": "midos",
+  "uptime_seconds": 142.7,
+  "timestamp": "2026-03-05T12:34:56Z",
+  "checks": {
+    "knowledge": {"status": "up", "chunks": 46234},
+    "vector_store": {"status": "up", "engine": "lancedb_hybrid", "total_chunks": 670432},
+    "skills": {"status": "up", "count": 203}
+  }
+}
+```
+
+**Use for:** Kubernetes readiness probe, load balancer health checks
+
+**Status codes:**
+- `200`: All checks passed
+- `503`: One or more checks failed (degraded mode)
+
+## Monitoring
+
+### Built-in Status Tool
+
+Query system status via MCP:
+
+```python
+hive_status()
+```
+
+**Returns:**
+```json
+{
+  "timestamp": "2026-03-05T12:34:56",
+  "midos_root": "/opt/midos",
+  "knowledge_files": 46234,
+  "skills_count": 203,
+  "protocols_count": 15,
+  "pearl_diver": {
+    "files_scanned": 1523,
+    "pearls_found": 87
+  }
+}
+```
+
+### Memory Statistics
+
+Check vector store health:
+
+```python
+memory_stats()
+```
+
+**Returns:**
+```json
+{
+  "status": "online",
+  "engine": "lancedb_hybrid (gemini-embedding-001 + BM25 RRF + decay)",
+  "table": "knowledge_chunks_cloud_rebuild",
+  "total_chunks": 670432
+}
+```
+
+### Log Aggregation
+
+For production, use structured logging:
+
+```python
+import structlog
+
+log = structlog.get_logger("midos")
+log.info("server_started", port=8419, transport="http")
+```
+
+**Integration with:**
+- **Loki** (Grafana stack)
+- **CloudWatch** (AWS)
+- **Datadog**
+- **Elasticsearch** (ELK stack)
+
+## Customization
+
+### Adding Custom Skills
+
+<Steps>
+  <Step title="Create skill directory">
+    ```bash
+    mkdir -p knowledge/skills/my_custom_skill
+    cd knowledge/skills/my_custom_skill
+    ```
+  </Step>
+
+  <Step title="Write SKILL.md">
+    ```markdown SKILL.md
+    # My Custom Skill
+
+    ## Overview
+    Production patterns for [your technology].
+
+    ## Patterns
+    ...
+    ```
+  </Step>
+
+  <Step title="Add compatibility.json">
+    ```json compatibility.json
+    {
+      "languages": ["python"],
+      "frameworks": ["custom-framework"],
+      "versions": {
+        "custom-framework": ">=1.0.0"
+      },
+      "tags": ["custom", "production"]
+    }
+    ```
+  </Step>
+
+  <Step title="Test the skill">
+    ```python
+    get_skill("my_custom_skill")
+    ```
+  </Step>
+</Steps>
+
+### Modifying Search Algorithms
+
+Edit `hive_commons/src/hive_commons/vector_store.py` to customize:
+
+- RRF fusion weights (line 405: `RRF_K = 60`)
+- Query expansion rules (line 247: `expand_query`)
+- Decay scoring (line 340: `compute_decay_score`)
+
+### Custom CLI Profiles
+
+Add client profiles in `config/cli_profiles.json`:
+
+```json config/cli_profiles.json
+{
+  "profiles": {
+    "my-custom-client": {
+      "id": "my-custom-client",
+      "display_name": "My Custom Client",
+      "capabilities": {
+        "can_use_hooks": true,
+        "can_use_memory": false
+      },
+      "tool_restrictions": {
+        "mode": "allowlist",
+        "denied": ["pool_signal"]
+      },
+      "default_search_mode": "hybrid"
+    }
+  }
+}
+```
+
+## Security
+
+### API Key Protection
+
+<Warning>
+Never expose `.env` or commit it to Git.
+</Warning>
+
+For production:
+
+1. **Use environment variables** (not `.env` files)
+2. **Rotate keys** regularly (Gemini keys every 90 days)
+3. **Restrict key permissions** (Gemini: embeddings only)
+
+### Network Security
+
+For HTTP transport:
+
+```bash
+# Local only (default)
+python -m modules.mcp_server.midos_mcp --http --host 127.0.0.1
+
+# All interfaces (use with firewall)
+python -m modules.mcp_server.midos_mcp --http --host 0.0.0.0
+```
+
+**Firewall rules (ufw):**
+
+```bash
+sudo ufw allow 8419/tcp comment 'MidOS MCP Server'
+sudo ufw enable
+```
+
+### TLS/SSL
+
+For production, use a reverse proxy (nginx, Caddy):
+
+```nginx nginx.conf
+server {
+    listen 443 ssl http2;
+    server_name midos.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/midos.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/midos.yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:8419;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ImportError: No module named 'fastmcp'">
+    **Cause**: Dependencies not installed.
+
+    **Fix**:
+    ```bash
+    pip install -e .
+    pip install -e hive_commons/
+    ```
+  </Accordion>
+
+  <Accordion title="Semantic search fails with 'no_gemini_key'">
+    **Cause**: `GEMINI_API_KEY` not set.
+
+    **Fix**:
+    ```bash
+    # Set in .env
+    echo "GEMINI_API_KEY=your_key" >> .env
+
+    # Or export directly
+    export GEMINI_API_KEY=your_key
+    python -m modules.mcp_server.midos_mcp --http
+    ```
+  </Accordion>
+
+  <Accordion title="Port 8419 already in use">
+    **Cause**: Another process using the port.
+
+    **Fix**:
+    ```bash
+    # Find process
+    lsof -i :8419
+
+    # Use different port
+    python -m modules.mcp_server.midos_mcp --http --port 9000
+    ```
+  </Accordion>
+
+  <Accordion title="Health check returns 503 (degraded)">
+    **Cause**: Vector store or knowledge directory not accessible.
+
+    **Check**:
+    ```bash
+    curl http://localhost:8419/health/ready
+    # Look at "checks" field for failing component
+    ```
+
+    **Common fixes**:
+    - Knowledge directory: Verify `knowledge/` exists
+    - Vector store: Check LanceDB files in `memory/lancedb/`
+  </Accordion>
+
+  <Accordion title="Docker container exits immediately">
+    **Cause**: Missing environment variables or incorrect CMD.
+
+    **Fix**:
+    ```bash
+    # Check logs
+    docker logs midos
+
+    # Verify .env passed
+    docker run --env-file .env midos-mcp:latest
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Tuning
+
+### Vector Store Optimization
+
+LanceDB performance depends on:
+
+1. **Index type**: Default is IVF_PQ (fast, approximate)
+2. **Memory**: 8GB recommended for 670K vectors
+3. **SSD**: Store `memory/lancedb/` on SSD for 10x speedup
+
+**Rebuild index for better performance:**
+
+```bash
+python -c "from hive_commons.vector_store import get_store; get_store()._get_table().create_index(num_partitions=256, num_sub_vectors=96)"
+```
+
+### Caching
+
+MidOS caches:
+- **Query embeddings**: 5-minute TTL, 100 entries max
+- **Search results**: 60-second TTL
+- **Chunk embeddings**: Persistent (in-memory + disk)
+
+**Clear cache:**
+
+```python
+# Restart server to clear in-memory caches
+sudo systemctl restart midos.service
+```
+
+## Scaling
+
+### Horizontal Scaling
+
+For high-traffic deployments:
+
+1. **Load balancer** (nginx, HAProxy)
+2. **Multiple MidOS instances** (stateless HTTP)
+3. **Shared vector store** (mount same LanceDB directory)
+
+```yaml docker-compose.scale.yml
+services:
+  midos:
+    image: midos-mcp:latest
+    deploy:
+      replicas: 3
+    volumes:
+      - shared-vector-store:/app/memory
+
+volumes:
+  shared-vector-store:
+    driver: nfs
+```
+
+**Scale up:**
+
+```bash
+docker-compose -f docker-compose.scale.yml up -d --scale midos=5
+```
+
+### Vertical Scaling
+
+For large knowledge bases:
+
+- **Memory**: 16GB+ for 1M+ vectors
+- **CPU**: 4+ cores for concurrent queries
+- **Disk**: NVMe SSD for vector store
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Connecting to MCP" icon="plug" href="/guides/connecting-to-mcp">
+    Connect your MCP client to your self-hosted instance
+  </Card>
+  <Card title="Search Strategies" icon="magnifying-glass" href="/guides/search-strategies">
+    Optimize search for your deployment
+  </Card>
+  <Card title="Using Skills" icon="graduation-cap" href="/guides/using-skills">
+    Add custom skills to your knowledge base
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/introduction">
+    Full API documentation
+  </Card>
+</CardGroup>

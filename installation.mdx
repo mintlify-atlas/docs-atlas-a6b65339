@@ -1,0 +1,512 @@
+---
+title: Installation
+description: "Deploy MidOS in the cloud or self-host on your own infrastructure"
+---
+
+## Deployment Options
+
+MidOS offers two deployment modes:
+
+<CardGroup cols={2}>
+  <Card title="Cloud (Recommended)" icon="cloud">
+    Use the hosted instance at `https://mcp.midos.dev/mcp`
+    
+    - Zero setup required
+    - Always up-to-date
+    - No infrastructure management
+    - Free dev tier included
+  </Card>
+  
+  <Card title="Self-Hosted" icon="server">
+    Run MidOS on your own infrastructure
+    
+    - Full control over data
+    - Custom knowledge integration
+    - Air-gapped deployment support
+    - Requires Python 3.11+
+  </Card>
+</CardGroup>
+
+## Cloud Deployment
+
+The easiest way to use MidOS is via the cloud instance. Simply configure your MCP client to point to `https://mcp.midos.dev/mcp`.
+
+See the [quickstart guide](/quickstart) for client-specific configuration instructions.
+
+<Note>
+The cloud instance includes both dev tier (free) and pro tier ($20/mo) features. No installation required.
+</Note>
+
+## Self-Hosted Deployment
+
+### System Requirements
+
+<AccordionGroup>
+  <Accordion title="Python Version">
+    **Python 3.11 or higher** is required. Python 3.12 is recommended.
+    
+    ```bash
+    python --version
+    # Should output: Python 3.11.x or higher
+    ```
+  </Accordion>
+  
+  <Accordion title="Dependencies">
+    Core dependencies (installed automatically via pip):
+    - `fastmcp>=2.0.0,<3.0.0` - MCP server framework
+    - `lancedb>=0.29.0,<0.30.0` - Vector database
+    - `google-genai>=1.0.0` - Gemini embeddings
+    - `structlog>=25.5.0` - Structured logging
+    - `httpx>=0.28.1` - HTTP client
+    - `python-dotenv>=1.0.0` - Environment configuration
+    - `pydantic>=2.12.5` - Data validation
+  </Accordion>
+  
+  <Accordion title="Hardware (Recommended)">
+    - **CPU**: 2+ cores
+    - **RAM**: 4GB minimum, 8GB recommended
+    - **Storage**: 10GB for knowledge base + vector store
+    - **Network**: Outbound HTTPS for Gemini API
+  </Accordion>
+</AccordionGroup>
+
+### Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/MidOSresearch/midos.git
+    cd midos
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Install MidOS and the shared hive_commons library:
+    
+    ```bash
+    pip install -e .
+    pip install -e hive_commons/
+    ```
+    
+    <Accordion title="What gets installed?">
+    - **midos**: Main package with MCP server and knowledge tools
+    - **hive_commons**: Shared library for vector store, configuration, and utilities
+    - **fastmcp**: MCP server framework with streamable HTTP transport
+    - **lancedb**: Vector database for semantic search
+    - All dependencies specified in `pyproject.toml`
+    </Accordion>
+  </Step>
+  
+  <Step title="Configure Environment Variables">
+    Copy the example environment file and fill in your values:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit `.env` and configure the required variables:
+    
+    ```bash
+    # Required: Gemini API for embeddings
+    GOOGLE_API_KEY=your_google_api_key_here
+    GEMINI_API_KEY=your_gemini_api_key_here
+    
+    # Optional: Notifications
+    GCHAT_WEBHOOK_URL=your_gchat_webhook_url
+    
+    # Optional: Database (defaults to SQLite)
+    DATABASE_URL=sqlite:///./orchestrator.db
+    
+    # Optional: Additional integrations
+    GITHUB_TOKEN=your_github_token
+    OPENROUTER_API_KEY=your_openrouter_key
+    ```
+    
+    <Warning>
+    **Never commit `.env` to version control.** It's already in `.gitignore`.
+    </Warning>
+    
+    <Accordion title="How to get a Gemini API key">
+    1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+    2. Click **Get API key**
+    3. Copy the key to your `.env` file
+    
+    Gemini API keys are used for generating embeddings for semantic search.
+    </Accordion>
+  </Step>
+  
+  <Step title="Run the Server">
+    MidOS supports two transport modes:
+    
+    <Tabs>
+      <Tab title="stdio (Local)">
+        For local use with Claude Desktop or local MCP clients:
+        
+        ```bash
+        python -m modules.mcp_server.midos_mcp
+        ```
+        
+        Configure your MCP client with:
+        ```json
+        {
+          "mcpServers": {
+            "midos": {
+              "command": "python",
+              "args": ["-m", "modules.mcp_server.midos_mcp"],
+              "cwd": "/path/to/midos"
+            }
+          }
+        }
+        ```
+      </Tab>
+      
+      <Tab title="HTTP (Remote)">
+        For remote access or web-based MCP clients:
+        
+        ```bash
+        python -m modules.mcp_server.midos_mcp --http --port 8419
+        ```
+        
+        The server will start on `http://0.0.0.0:8419` with the MCP endpoint at `/mcp`.
+        
+        Configure your MCP client with:
+        ```json
+        {
+          "mcpServers": {
+            "midos": {
+              "url": "http://localhost:8419/mcp"
+            }
+          }
+        }
+        ```
+        
+        <Accordion title="Custom host and port">
+        ```bash
+        python -m modules.mcp_server.midos_mcp \
+          --http \
+          --host 0.0.0.0 \
+          --port 8419
+        ```
+        
+        - `--host`: Bind address (default: 0.0.0.0)
+        - `--port`: Port number (default: 8419)
+        </Accordion>
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Verify Installation">
+    Check that MidOS is running correctly:
+    
+    <Tabs>
+      <Tab title="stdio mode">
+        If running in stdio mode, your MCP client should connect automatically. Check the client logs for:
+        ```
+        Starting Midos MCP Server (FastMCP)...
+        Knowledge dir: /path/to/midos/knowledge
+        Skills: 200 files
+        Protocols: 50 files
+        Transport: stdio
+        ```
+      </Tab>
+      
+      <Tab title="HTTP mode">
+        Test the health endpoint:
+        ```bash
+        curl http://localhost:8419/health
+        ```
+        
+        Expected response:
+        ```json
+        {
+          "status": "ok",
+          "server": "midos",
+          "uptime_seconds": 5.2,
+          "timestamp": "2026-03-05T12:34:56Z"
+        }
+        ```
+        
+        Check readiness (all dependencies):
+        ```bash
+        curl http://localhost:8419/health/ready
+        ```
+        
+        Expected response:
+        ```json
+        {
+          "status": "ready",
+          "server": "midos",
+          "uptime_seconds": 10.5,
+          "timestamp": "2026-03-05T12:35:01Z",
+          "checks": {
+            "knowledge": {
+              "status": "up",
+              "chunks": 46000
+            },
+            "vector_store": {
+              "status": "up",
+              "engine": "lancedb",
+              "total_chunks": 670000
+            },
+            "skills": {
+              "status": "up",
+              "count": 200
+            }
+          }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Docker Deployment
+
+MidOS includes a production-ready Dockerfile for containerized deployments.
+
+<Steps>
+  <Step title="Build the Image">
+    ```bash
+    docker build -t midos:latest .
+    ```
+  </Step>
+  
+  <Step title="Run the Container">
+    ```bash
+    docker run -d \
+      --name midos \
+      -p 8419:8419 \
+      -e GOOGLE_API_KEY=your_key_here \
+      -e GEMINI_API_KEY=your_key_here \
+      -v $(pwd)/knowledge:/app/knowledge \
+      midos:latest
+    ```
+    
+    <Accordion title="Volume Mounts (Optional)">
+    Mount local directories to persist data and customize knowledge:
+    
+    ```bash
+    -v $(pwd)/knowledge:/app/knowledge     # Knowledge base
+    -v $(pwd)/synapse:/app/synapse         # Agent memory
+    -v $(pwd)/.env:/app/.env               # Environment config
+    ```
+    </Accordion>
+  </Step>
+  
+  <Step title="Verify Container">
+    ```bash
+    docker ps
+    docker logs midos
+    curl http://localhost:8419/health
+    ```
+  </Step>
+</Steps>
+
+## Production Deployment
+
+For production deployments, consider these best practices:
+
+<AccordionGroup>
+  <Accordion title="Use a Process Manager">
+    Use systemd, supervisord, or PM2 to ensure the server restarts on failure:
+    
+    **systemd example** (`/etc/systemd/system/midos.service`):
+    ```ini
+    [Unit]
+    Description=MidOS MCP Server
+    After=network.target
+    
+    [Service]
+    Type=simple
+    User=midos
+    WorkingDirectory=/opt/midos
+    Environment="PATH=/opt/midos/venv/bin"
+    ExecStart=/opt/midos/venv/bin/python -m modules.mcp_server.midos_mcp --http --port 8419
+    Restart=always
+    RestartSec=10
+    
+    [Install]
+    WantedBy=multi-user.target
+    ```
+    
+    Enable and start:
+    ```bash
+    sudo systemctl enable midos
+    sudo systemctl start midos
+    sudo systemctl status midos
+    ```
+  </Accordion>
+  
+  <Accordion title="Use a Reverse Proxy">
+    Put MidOS behind nginx or Caddy for TLS termination and load balancing:
+    
+    **nginx example**:
+    ```nginx
+    server {
+        listen 443 ssl http2;
+        server_name mcp.yourdomain.com;
+        
+        ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+        
+        location /mcp {
+            proxy_pass http://localhost:8419;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        
+        location /health {
+            proxy_pass http://localhost:8419;
+        }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor Health Endpoints">
+    Set up monitoring for the health endpoints:
+    
+    - **Liveness**: `GET /health` - Is the process alive?
+    - **Readiness**: `GET /health/ready` - Are dependencies functional?
+    
+    Configure your monitoring system (e.g., Prometheus, Datadog, Uptime Robot) to alert on:
+    - `/health` returning non-200 status
+    - `/health/ready` showing `"status": "degraded"`
+    - Response time > 5 seconds
+  </Accordion>
+  
+  <Accordion title="Secure API Keys">
+    - Store `.env` outside the app directory
+    - Use environment variables from your deployment platform
+    - Rotate keys regularly
+    - Never commit credentials to git
+    - Use read-only filesystem mounts where possible
+  </Accordion>
+  
+  <Accordion title="Scale with Multiple Instances">
+    MidOS includes multi-instance coordination via the pool system:
+    
+    ```python
+    # Agents can signal work status across instances
+    pool_signal(
+        action="completed",
+        topic="video-transcription",
+        summary="Processed 10 videos",
+        affects="knowledge/chunks/new-videos.md"
+    )
+    ```
+    
+    Run multiple instances behind a load balancer for high availability.
+  </Accordion>
+</AccordionGroup>
+
+## Updating MidOS
+
+To update your self-hosted instance:
+
+<Steps>
+  <Step title="Pull Latest Changes">
+    ```bash
+    cd midos
+    git pull origin main
+    ```
+  </Step>
+  
+  <Step title="Update Dependencies">
+    ```bash
+    pip install -e . --upgrade
+    pip install -e hive_commons/ --upgrade
+    ```
+  </Step>
+  
+  <Step title="Restart the Server">
+    ```bash
+    # systemd
+    sudo systemctl restart midos
+    
+    # Docker
+    docker restart midos
+    
+    # Manual
+    pkill -f midos_mcp
+    python -m modules.mcp_server.midos_mcp --http --port 8419
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Check the [changelog](https://github.com/MidOSresearch/midos/releases) before updating for breaking changes.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ImportError: No module named 'hive_commons'">
+    Install the hive_commons library:
+    ```bash
+    pip install -e hive_commons/
+    ```
+  </Accordion>
+  
+  <Accordion title="Vector store not available">
+    Ensure LanceDB and Google Gemini API are configured:
+    ```bash
+    pip install lancedb google-genai
+    ```
+    
+    Check that `GOOGLE_API_KEY` and `GEMINI_API_KEY` are set in `.env`.
+  </Accordion>
+  
+  <Accordion title="Permission denied errors">
+    Ensure the midos user has write access to:
+    - `knowledge/` directory
+    - `synapse/` directory
+    - SQLite database file (if using SQLite)
+    
+    ```bash
+    chown -R midos:midos /opt/midos
+    chmod -R 755 /opt/midos
+    ```
+  </Accordion>
+  
+  <Accordion title="Port already in use">
+    Change the port with `--port`:
+    ```bash
+    python -m modules.mcp_server.midos_mcp --http --port 8420
+    ```
+    
+    Or find and kill the existing process:
+    ```bash
+    lsof -i :8419
+    kill <PID>
+    ```
+  </Accordion>
+  
+  <Accordion title="Slow semantic search">
+    The first semantic search after startup builds the vector index, which can take 30-60 seconds. Subsequent searches are fast (< 100ms).
+    
+    For production, pre-build the index:
+    ```bash
+    python -c "from hive_commons.vector_store import warm_cache; warm_cache()"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Your Stack" icon="gear" href="/guides/agent-handshake">
+    Personalize MidOS for your tech stack with agent_handshake
+  </Card>
+  <Card title="Explore Tools" icon="tools" href="/api/introduction">
+    Learn about all 18 MCP tools available
+  </Card>
+  <Card title="Architecture Deep Dive" icon="sitemap" href="/architecture/overview">
+    Understand how MidOS organizes and serves knowledge
+  </Card>
+  <Card title="Contributing Knowledge" icon="plus" href="/contributing">
+    Add your own battle-tested patterns to MidOS
+  </Card>
+</CardGroup>

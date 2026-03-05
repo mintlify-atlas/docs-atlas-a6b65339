@@ -1,0 +1,369 @@
+---
+title: "Knowledge Pipeline"
+description: "Understanding MidOS's 5-layer knowledge validation and promotion system"
+---
+
+# Knowledge Pipeline
+
+MidOS uses a **5-layer progressive validation pipeline** that automatically promotes knowledge based on empirical evidence and measured impact. Content flows upward through increasingly strict validation gates.
+
+## Pipeline Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 5: SOTA (State of the Art)                          │
+│  ├─ 9 battle-tested patterns                               │
+│  └─ Production-proven at scale                             │
+└─────────────────────────────────────────────────────────────┘
+                           ↑
+                   [Scale validation]
+                           ↑
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 4: EUREKA (Breakthrough Insights)                    │
+│  ├─ 105 validated discoveries                              │
+│  ├─ Measured ROI/Kaizen improvements                       │
+│  └─ Examples: 70% token reduction, 50% cache hit rate      │
+└─────────────────────────────────────────────────────────────┘
+                           ↑
+                 [ROI measurement gate]
+                           ↑
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 3: Truth (Empirical Validation)                      │
+│  ├─ 16 verified patches                                    │
+│  ├─ Survived production contrast testing                   │
+│  └─ Has documented WHY and FOR WHAT                        │
+└─────────────────────────────────────────────────────────────┘
+                           ↑
+                  [Empirical testing gate]
+                           ↑
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 2: Skills (Production Patterns)                      │
+│  ├─ 79 skill packs organized by stack                      │
+│  ├─ FastAPI, TypeScript, React, PostgreSQL, etc.           │
+│  └─ Version-controlled with compatibility matrices         │
+└─────────────────────────────────────────────────────────────┘
+                           ↑
+                    [Pattern extraction]
+                           ↑
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 1: Chunks (Raw Knowledge)                            │
+│  ├─ ~1,051 total chunks                                    │
+│  ├─ 30-day decay window                                    │
+│  └─ Triage: A (technical), B (context), C (discard)       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Layer Details
+
+### Layer 1: Chunks
+
+**Purpose**: Entry point for all new knowledge
+
+**Criteria**:
+- Triage A: Technical, verifiable, applicable
+- Triage B: Useful context/awareness
+- Triage C: Generic/beginner content → discarded
+
+**Decay**: Chunks unused for 30 days are archived automatically
+
+**Current Scale**: ~1,051 active chunks across:
+- `chunks/` (root): 400 files
+- `chunks/external`: 295 files  
+- `chunks/internal`: 138 files
+- `chunks/community`: 1 file
+- `chunks/skills`: 4 files
+
+**Example**: Research notes on MCP security, Anthropic agent patterns, React 19 features
+
+### Layer 2: Skills
+
+**Purpose**: Production-tested patterns organized by technology stack
+
+**Criteria**:
+- Reusable across multiple projects
+- Stack-specific (FastAPI, TypeScript, React, etc.)
+- Includes compatibility information
+- Version-controlled
+
+**Current Scale**: 79 skill packs
+
+**Structure**:
+```
+knowledge/skills/
+├── fastapi/SKILL.md
+├── typescript_mastery/SKILL.md
+├── react_patterns_hooks/SKILL.md
+├── postgresql.md
+├── docker-containerization.md
+└── ... (74 more)
+```
+
+**Example Skills**:
+- `fastapi-modern-patterns` (Pydantic v2, async, production)
+- `typescript_mastery` (generics, type systems)
+- `redis_caching_patterns`
+- `prisma_v7`
+
+See [Skill Packs](/concepts/skill-packs) for detailed structure.
+
+### Layer 3: Truth
+
+**Purpose**: Empirically validated knowledge with documented causation
+
+**Promotion Criteria** (must meet all 3):
+1. **WHY**: Has documented cause (not just "what" but "why it works")
+2. **FOR WHAT**: Clear purpose and context
+3. **CONTRAST**: Survived comparison against existing knowledge
+
+**Degradation Triggers**:
+- New evidence contradicts with superior data
+- Stack/context no longer exists
+- No queries for 90 days ("truth nobody uses isn't truth")
+
+**Current Scale**: 16 verified truth patches
+
+**Examples**:
+- `TRUTH_AGENT_AUTH_NOT_HUMAN_AUTH` — Agent credentials ≠ user credentials
+- `TRUTH_LLM_PLANNING_LIMITATION` — Why LLMs fail at multi-step planning
+- `knowledge_pipeline_fsm` — Pipeline state machine design
+
+### Layer 4: EUREKA
+
+**Purpose**: Validated breakthrough insights with measured ROI
+
+**Promotion Criteria** (must meet ≥1):
+1. Measurable ROI improvement in a process
+2. Kaizen optimization with verifiable metrics
+3. Discovered optimal way to work with a technology
+
+**Current Scale**: 105 EUREKA documents (73 EUREKA + 17 ATOMs + 15 reviews)
+
+**Real Examples**:
+- `SKILLS_CLI_TOKEN_OPTIMIZATION` — **70% token reduction**
+- `EUREKA_cache-semantica` — **50% free tier cost reduction**
+- `EUREKA_HYBRID_SEARCH_RRF_2026` — **+9.3% relevance** on 9,753 vectors
+- `EUREKA_BATCH_HANDLER_2026` — Parallel batching, 21/21 tests passed
+- `EUREKA_MODEL_SELECTOR_2026` — Complexity-based routing, 9 models
+
+See [EUREKA System](/concepts/eureka-system) for validation process.
+
+### Layer 5: SOTA
+
+**Purpose**: State-of-the-art patterns proven at production scale
+
+**Promotion Criteria**:
+- Battle-tested across multiple production systems
+- Scaled beyond pilot/prototype
+- Industry-leading performance
+- Documented in production war stories
+
+**Current Scale**: 9 SOTA patterns
+
+**Examples** (based on typical SOTA content):
+- Multi-region deployment patterns
+- Million-user scale architectures  
+- Zero-downtime migration strategies
+- Production incident response playbooks
+
+## How Content Moves Through the Pipeline
+
+### Ingestion Flow
+
+```python
+# 1. New knowledge enters as chunk
+chunk = {
+    "text": "FastAPI supports async route handlers...",
+    "source": "research_fastapi_async_2026.md",
+    "metadata": {"stack": "fastapi", "confidence": 0.8}
+}
+
+# 2. Embedded and stored in LanceDB (670K vectors)
+vector_store.store_wisdom_chunk(
+    text=chunk["text"],
+    source=chunk["source"],
+    metadata=chunk["metadata"]
+)
+
+# 3. Queried via hybrid search (semantic + keyword)
+results = search_memory(
+    query="async patterns fastapi",
+    top_k=5,
+    search_mode="hybrid"  # RRF fusion
+)
+```
+
+### Promotion Flow
+
+**Chunks → Skills**:
+- Pattern appears in 3+ chunks with similar stack
+- Extracted and consolidated into skill pack
+- Added to `knowledge/skills/{stack}/SKILL.md`
+
+**Skills → Truth**:
+- Skill tested in production
+- Documented WHY it works (causation)
+- Passed contrast testing against corpus
+
+**Truth → EUREKA**:
+- Truth shows measurable improvement
+- ROI metrics collected (% reduction, speedup, etc.)
+- Validation test suite passes
+
+**EUREKA → SOTA**:
+- EUREKA validated across multiple production systems
+- Scaled beyond single-team usage
+- Becomes industry reference pattern
+
+## Validation Gates
+
+### Gate 1: Triage (Entry to Chunks)
+
+```python
+if is_technical and is_applicable:
+    status = "A"  # Index as active chunk
+elif is_contextual:
+    status = "B"  # Index with context-only tag  
+else:
+    status = "C"  # Discard to _discarded/
+```
+
+### Gate 2: Pattern Recognition (Chunks → Skills)
+
+- Minimum 3 occurrences of similar pattern
+- Stack identification (FastAPI, React, etc.)
+- Compatibility matrix defined
+- Version constraints specified
+
+### Gate 3: Empirical Testing (Skills → Truth)
+
+```python
+def validate_truth(skill):
+    checks = [
+        has_documented_why(skill),      # Causation
+        has_clear_purpose(skill),       # Use case
+        passed_contrast_test(skill)     # No contradictions
+    ]
+    return all(checks)
+```
+
+### Gate 4: ROI Measurement (Truth → EUREKA)
+
+- Quantifiable metrics required
+- A/B testing or before/after comparison
+- Examples: % reduction, speedup factor, cost savings
+
+### Gate 5: Scale Validation (EUREKA → SOTA)
+
+- Multi-team/multi-project validation
+- Production stability over 90+ days
+- Industry adoption signals
+
+## Real Numbers
+
+As of 2026-03:
+
+| Layer | Count | Example Metric |
+|-------|------:|----------------|
+| Chunks | 1,051 | 30-day decay window |
+| Skills | 79 | Version-controlled packs |
+| Truth | 16 | 90-day usage threshold |
+| EUREKA | 105 | 70% token reduction |
+| SOTA | 9 | Multi-system validation |
+| **Total** | **1,260** | **Embedded as 670K vectors** |
+
+## Memory Decay System
+
+MidOS uses **importance-weighted exponential decay** to manage knowledge lifecycle:
+
+```python
+# From hive_commons/vector_store.py:340-366
+def compute_decay_score(
+    base_quality: float = 0.5,
+    last_accessed: float = 0.0,
+    access_count: int = 0,
+    created_at: float = 0.0,
+    half_life_days: float = 30.0
+) -> float:
+    """Compute memory decay score.
+    
+    Formula: decay_score = base_quality * time_factor * access_boost
+    Where:
+      time_factor = 0.95 ^ days_since_access  (≈ half-life of ~14 days)
+      access_boost = log(access_count + 1)     (logarithmic)
+    """
+    now = time.time()
+    days_since = (now - (last_accessed or created_at or now)) / 86400.0
+    
+    time_factor = 0.95 ** days_since
+    access_boost = math.log(access_count + 1) if access_count > 0 else 0.1
+    
+    return base_quality * time_factor * access_boost
+```
+
+**Decay thresholds**:
+- Score < 0.05: Flagged as stale
+- 30 days no access (chunks): Auto-archive
+- 90 days no access (truth): Degradation review
+
+## Integration with Search
+
+The pipeline feeds MidOS's [Semantic Search](/concepts/semantic-search) system:
+
+- **670K vectors** across all layers
+- **3072-dimensional** Gemini embeddings (`gemini-embedding-001`)
+- **Hybrid search** (vector + BM25 keyword) with RRF fusion
+- **Per-layer filtering** available in queries
+
+```python
+# Search specific layer
+results = search_memory(
+    query="async error handling",
+    top_k=5,
+    metadata_filter={"layer": "EUREKA"}  # Only EUREKA layer
+)
+```
+
+## Best Practices
+
+### For Contributors
+
+1. **Start with chunks**: All new knowledge enters as chunks in `knowledge/chunks/`
+2. **Add metadata**: Include `stack`, `confidence`, `tags` for better retrieval
+3. **Document sources**: Always cite URLs, papers, or production systems
+4. **Let promotion happen organically**: Don't manually promote—let validation gates decide
+
+### For Consumers
+
+1. **Query higher layers first**: EUREKA → Truth → Skills → Chunks
+2. **Use hybrid search**: Combines semantic + keyword for best results
+3. **Check confidence scores**: Higher layers = higher confidence
+4. **Monitor decay scores**: Low decay = stale knowledge, may need refresh
+
+## CLI Usage
+
+```bash
+# Query knowledge
+midos search "fastapi async patterns" --layer eureka
+
+# Check decay report
+midos memory decay-report --limit 20
+
+# Refresh stale chunk
+midos memory refresh "FastAPI supports async..."
+
+# Archive outdated knowledge  
+midos memory archive "Old pattern from 2024..."
+```
+
+## Related Concepts
+
+- [Skill Packs](/concepts/skill-packs) — Layer 2 structure and versioning
+- [EUREKA System](/concepts/eureka-system) — Layer 4 validation process
+- [Semantic Search](/concepts/semantic-search) — How pipeline content is retrieved
+
+## Implementation Reference
+
+- Knowledge pipeline: `source/knowledge/`
+- Vector storage: `source/hive_commons/src/hive_commons/vector_store.py`
+- Decay logic: `vector_store.py:340-366`
+- Search implementation: `vector_store.py:479-583`

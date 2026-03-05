@@ -1,0 +1,168 @@
+---
+title: 'get_eureka'
+description: 'Retrieve a specific EUREKA breakthrough document with validated improvements'
+icon: 'lightbulb'
+---
+
+## Overview
+
+The `get_eureka` tool retrieves EUREKA breakthrough documents - validated insights that demonstrate measurable improvements (ROI, performance, or Kaizen optimization). EUREKA documents represent L4 pipeline knowledge with proven impact.
+
+<Note>
+  Access to EUREKA documents requires a **MidOS PRO API key**. Get your key at [midos.dev/pricing](https://midos.dev/pricing)
+</Note>
+
+## Function Signature
+
+```python
+async def get_eureka(name: str) -> str
+```
+
+## Parameters
+
+<ParamField path="name" type="string" required>
+  The EUREKA document name to retrieve. Case-insensitive matching is supported.
+  
+  Examples:
+  - `"EUREKA_CACHE_SEMANTICA"` - Semantic caching optimization
+  - `"ATOM_001"` - Atom breakthrough document
+  - `"EUREKA_MULTI_AGENT_CONSENSUS_2026"` - Multi-agent decision making
+  - `"EUREKA_BATCH_HANDLER_2026"` - Parallel batch processing
+</ParamField>
+
+## Return Value
+
+Returns a string containing:
+- **Success**: Full content of the EUREKA document in Markdown format
+- **Not Found**: Error message with list of available EUREKA documents (up to 20)
+
+```
+EUREKA not found: {name}
+
+Available EUREKA documents: ['ATOM_001', 'EUREKA_CACHE_SEMANTICA', ...]
+```
+
+## Behavior
+
+1. **Exact Match**: First attempts to find an exact match for `{name}.md`
+2. **Case-Insensitive Search**: If no exact match, performs case-insensitive search
+3. **Error with Suggestions**: Returns helpful error with available EUREKA names
+4. **Authentication**: Requires valid MidOS PRO API key
+
+## EUREKA Criteria
+
+A document qualifies as EUREKA if it meets ≥1 criterion:
+
+1. **Measurable ROI**: Demonstrates quantifiable improvement in a process
+2. **Kaizen Optimization**: Provably optimizes a workflow
+3. **Optimal Discovery**: Identifies the best way to work with a technology/stack
+
+## Usage Examples
+
+### Get Token Optimization EUREKA
+
+```python
+result = await get_eureka(name="SKILLS_CLI_TOKEN_OPTIMIZATION")
+# Returns: Document showing 70% token reduction with Skills+CLI vs MCP direct
+```
+
+### Retrieve Semantic Cache Breakthrough
+
+```python
+result = await get_eureka(name="EUREKA_cache-semantica")
+# Returns: 50% reduction in free tier usage for repetitive patterns
+```
+
+### Get Multi-Agent Consensus Pattern
+
+```python
+result = await get_eureka(name="EUREKA_MULTI_AGENT_CONSENSUS_2026")
+# Returns: Consensus builder with weighted CRITIC/ADVOCATE/PRAGMATIC/JUDGE
+```
+
+### Access Atom Documents
+
+```python
+# Atom series: ATOM_001 through ATOM_017
+result = await get_eureka(name="ATOM_001")
+result = await get_eureka(name="ATOM_010")
+```
+
+### Case-Insensitive Lookup
+
+```python
+# These are equivalent:
+result = await get_eureka(name="eureka_batch_handler_2026")
+result = await get_eureka(name="EUREKA_BATCH_HANDLER_2026")
+result = await get_eureka(name="Eureka_Batch_Handler_2026")
+```
+
+## Available EUREKA Documents
+
+### Architecture & Patterns
+
+- `EUREKA_MULTI_AGENT_CONSENSUS_2026` - Multi-agent decision making
+- `EUREKA_AGENT_ARCHITECTURE_PATTERNS_2026` - Agent architecture patterns
+- `EUREKA_AGENTIC_RAG_ARCHITECTURES_2026` - RAG architecture patterns
+- `EUREKA_AGENTIC_RAG_PATTERNS_2026` - RAG implementation patterns
+
+### Performance Optimization
+
+- `SKILLS_CLI_TOKEN_OPTIMIZATION` - 70% token reduction
+- `EUREKA_CACHE_SEMANTICA` - 50% free tier reduction
+- `EUREKA_BATCH_HANDLER_2026` - Parallel batching (21/21 tests)
+- `EUREKA_MODEL_SELECTOR_2026` - Complexity-based routing (16/16 tests)
+
+### Resilience & Error Handling
+
+- `EUREKA_ERROR_CLASSIFIER_2026` - 10 categories + 8 recovery strategies
+- `EUREKA_HEALTH_MONITOR_2026` - Status tracking (19/19 tests)
+- `EUREKA_health-fallback` - Automatic Ollama fallback
+- `EUREKA_local-fallback` - 100% offline capability
+- `EUREKA_JSON_REPAIR_2026` - Repairs 8 common LLM JSON errors
+
+### Conversation Management
+
+- `EUREKA_CONVERSATION_MANAGER_2026` - Multi-turn truncation (20/20 tests)
+
+### Atom Series
+
+- `ATOM_001` through `ATOM_017` - Specialized breakthrough documents
+
+<Info>
+  Total: **90 EUREKA documents** (73 EUREKA + 17 ATOMs)
+</Info>
+
+## EUREKA vs Other Knowledge Types
+
+| Type | Criteria | Example |
+|------|----------|----------|
+| **EUREKA** | Measurable improvement | Token optimization (-70%) |
+| **Skill** | Technology patterns | React best practices |
+| **Truth Patch** | Misconception fix | LLM planning limitations |
+| **Protocol** | Standard/specification | Agent interoperability |
+| **Chunk** | Raw research | Interesting article |
+
+## Related Tools
+
+- [`get_truth`](/api/knowledge/get-truth) - Get truth patch corrections
+- [`get_protocol`](/api/knowledge/get-protocol) - Get protocol specifications
+- [`get_skill`](/api/knowledge/get-skill) - Get technology skill documents
+- [`semantic_search`](/api/search/semantic-search) - Search across all knowledge types
+
+## Access Requirements
+
+<Card title="MidOS PRO Required" icon="lock" color="#8b5cf6">
+  EUREKA documents are part of the MidOS PRO Knowledge Library.
+  
+  **To access**:
+  1. Get your API key at [midos.dev/pricing](https://midos.dev/pricing)
+  2. Configure authentication in your MCP client
+  3. Use `get_eureka` with authenticated requests
+</Card>
+
+## Source Location
+
+EUREKA directory: `knowledge/EUREKA/`
+
+Source: `modules/mcp_server/midos_mcp.py:333-351`

@@ -1,0 +1,236 @@
+---
+title: 'search_knowledge'
+description: 'Fast keyword search across the MidOS knowledge base'
+icon: 'search'
+---
+
+## Overview
+
+Performs keyword-based search across all knowledge layers in MidOS. This is the fastest search method, ideal for finding exact matches or known terms.
+
+**When to use**: You know specific keywords or file names you're looking for. For semantic understanding, use `semantic_search` instead.
+
+## Function Signature
+
+```python
+async def search_knowledge(query: str, max_results: int = 5) -> str
+```
+
+## Parameters
+
+<ParamField path="query" type="string" required>
+  Search query with keywords or topics. Searches both file names and content.
+  
+  **Examples**: "RAG implementation", "caching patterns", "React hooks"
+</ParamField>
+
+<ParamField path="max_results" type="integer" default="5">
+  Maximum number of results to return. Higher values may increase response time.
+  
+  **Range**: 1-50 recommended
+</ParamField>
+
+## Return Format
+
+Returns a formatted string with search results:
+
+```markdown
+Found {count} results for '{query}':
+
+## React 19 Server Components
+Path: knowledge/chunks/react19_server_components.md
+```
+Server Components in React 19 allow you to render components on the server...
+```
+```
+
+If no results found:
+```
+No results found for: your query
+```
+
+## Usage Examples
+
+<CodeGroup>
+
+```python Basic Search
+# Search for caching-related content
+result = await search_knowledge("semantic cache")
+
+# Returns:
+# Found 3 results for 'semantic cache':
+# 
+# ## EUREKA_CACHE_SEMANTICA
+# Path: knowledge/EUREKA/EUREKA_CACHE_SEMANTICA.md
+# ```
+# Semantic cache implementation using LanceDB vectors...
+# ```
+```
+
+```python Limit Results
+# Get top 10 results for React patterns
+result = await search_knowledge(
+    query="React Server Components",
+    max_results=10
+)
+```
+
+```python File Name Search
+# Find skills by partial name match
+result = await search_knowledge("RAG_SYSTEMS")
+
+# Matches: RAG_SYSTEMS_2026_SOTA.md
+```
+
+</CodeGroup>
+
+## Search Behavior
+
+### What Gets Searched
+
+- **File names**: Case-insensitive match on file stems
+- **File content**: Full-text search across all markdown files
+- **Knowledge layers**: Skills, protocols, EUREKA, truth patches, chunks
+
+### Result Ordering
+
+1. Files with query in name (ranked first)
+2. Files with query in content (by discovery order)
+3. Limited to `max_results` total
+
+### Context Snippets
+
+- **Match found**: 100 chars before + 200 chars after the match
+- **Name match only**: First 300 chars of file content
+- Snippet length: ~300 characters
+
+## Performance
+
+- **Latency**: less than 100ms typical (no API calls)
+- **No rate limits**: Pure file system search
+- **Scales**: Handles 46K+ chunks efficiently
+
+## Comparison with Other Tools
+
+<CardGroup cols={2}>
+
+<Card title="vs semantic_search" icon="brain">
+  **Use search_knowledge when**:
+  - You know exact keywords
+  - Speed is critical
+  - No embeddings needed
+  
+  **Use semantic_search when**:
+  - Conceptual queries
+  - Synonyms matter
+  - Need relevance ranking
+</Card>
+
+<Card title="vs hybrid_search" icon="shuffle">
+  **Use search_knowledge when**:
+  - Simple keyword lookup
+  - Known file names
+  - Fastest results
+  
+  **Use hybrid_search when**:
+  - Best possible relevance
+  - Combined approach needed
+  - Willing to trade speed for quality
+</Card>
+
+</CardGroup>
+
+## Stack Filtering
+
+`search_knowledge` does **not** support stack filtering. For stack-aware search, use:
+
+- `semantic_search(query, stack="python,react")`
+- `list_skills(stack="python,react")`
+
+## Real-World Examples
+
+<Tabs>
+  <Tab title="Find Implementation Pattern">
+    ```python
+    # Agent wants to implement rate limiting
+    result = await search_knowledge("rate limiting circuit breaker")
+    
+    # Returns:
+    # - knowledge/skills/CIRCUIT_BREAKER_PATTERN.md
+    # - knowledge/EUREKA/EUREKA_RATE_LIMIT_ADAPTIVE.md
+    # - knowledge/chunks/rate_limiting_best_practices.md
+    ```
+  </Tab>
+  
+  <Tab title="Locate Specific Skill">
+    ```python
+    # Find the RAG systems skill document
+    result = await search_knowledge("RAG_SYSTEMS_2026")
+    
+    # Returns single match:
+    # knowledge/skills/RAG_SYSTEMS_2026_SOTA.md
+    ```
+  </Tab>
+  
+  <Tab title="Research Topic">
+    ```python
+    # Explore all content about embeddings
+    result = await search_knowledge(
+        query="vector embeddings",
+        max_results=20
+    )
+    
+    # Returns 20 most relevant files across all knowledge layers
+    ```
+  </Tab>
+</Tabs>
+
+## Error Handling
+
+```python
+# Empty query
+result = await search_knowledge("")
+# Returns: "No results found for: "
+
+# No matches
+result = await search_knowledge("xyzabc123nonexistent")
+# Returns: "No results found for: xyzabc123nonexistent"
+
+# File system errors are handled gracefully (OSError caught)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose specific keywords">
+    Better: `"FastAPI dependency injection"`
+    
+    Worse: `"how do I use dependencies"`
+    
+    search_knowledge is literal — use precise terms.
+  </Accordion>
+  
+  <Accordion title="Start broad, then narrow">
+    1. `search_knowledge("caching", max_results=20)`
+    2. Review results
+    3. `search_knowledge("semantic cache LanceDB", max_results=5)`
+  </Accordion>
+  
+  <Accordion title="Combine with other tools">
+    ```python
+    # 1. Quick keyword check
+    results = await search_knowledge("React 19")
+    
+    # 2. If insufficient, try semantic
+    if "No results" in results:
+        results = await semantic_search("React 19 new features")
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Tools
+
+- [`semantic_search`](/api/search/semantic-search) - Vector-based semantic search
+- [`hybrid_search`](/api/search/hybrid-search) - Combined keyword + semantic
+- [`smart_search`](/api/search/smart-search) - Auto-detects best search mode
+- [`get_skill`](/api/knowledge/get-skill) - Direct skill retrieval by name

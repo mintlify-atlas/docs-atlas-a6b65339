@@ -1,0 +1,540 @@
+---
+title: "EUREKA System"
+description: "Validated breakthrough insights with measured ROI and Kaizen improvements"
+---
+
+# EUREKA System
+
+The EUREKA system is **Layer 4** in MidOS's [Knowledge Pipeline](/concepts/knowledge-pipeline). EUREKA documents represent validated breakthrough insights with **measurable ROI** or **Kaizen improvements**.
+
+## What is a EUREKA?
+
+A EUREKA is:
+- **Validated**: Tested in production with metrics
+- **Measurable**: Quantified improvements (%, ms, cost, etc.)
+- **Breakthrough**: Not incremental—represents a discovery or optimization
+- **Reproducible**: Others can achieve similar results
+
+> "EUREKA" = "We found the optimal way to do X"
+
+A EUREKA is **NOT**:
+- "Something interesting I read" → That's a **chunk**
+- "A pattern that works" → That's a **skill**
+- "A verified fact" → That's a **truth**
+
+## Promotion Criteria
+
+A knowledge item becomes a EUREKA when it meets **≥1** of these criteria:
+
+### 1. Measurable ROI Improvement
+
+Quantifiable performance, cost, or quality gains:
+
+```
+Before: 10,000 tokens per request
+After:  3,000 tokens per request
+ROI:    70% reduction
+
+→ EUREKA: SKILLS_CLI_TOKEN_OPTIMIZATION
+```
+
+### 2. Kaizen Optimization
+
+Comprovable workflow improvement with metrics:
+
+```
+Before: Sequential embedding (1200ms per text)
+After:  Batch + concurrent (19ms per text)
+Kaizen: 63x speedup
+
+→ EUREKA: BATCH_EMBEDDING_OPTIMIZATION
+```
+
+### 3. Discovered Optimal Approach
+
+Found the best way to work with a technology:
+
+```
+Tested: Vector-only, Keyword-only, Hybrid (RRF)
+Winner: Hybrid search
+Metric: +9.3% relevance on 9,753 vectors
+
+→ EUREKA: EUREKA_HYBRID_SEARCH_RRF_2026
+```
+
+## EUREKA Structure
+
+Every EUREKA document follows this format:
+
+```markdown
+---
+id: E-001
+title: "Skills CLI Token Optimization"
+field: "Token Optimization"
+improvement: "70% token reduction"
+validated: 2026-02-10
+confidence: 0.98
+tags: ["optimization", "tokens", "cost", "mcp"]
+---
+
+# EUREKA E-001: Skills CLI Token Optimization
+
+## The Discovery
+
+[What we discovered, in 1-2 sentences]
+
+## The Problem
+
+[What wasn't working, with concrete examples]
+
+## The Solution
+
+[How we solved it, with implementation details]
+
+## Validation
+
+### Metrics
+- **Before**: [baseline measurements]
+- **After**: [post-optimization measurements]
+- **ROI**: [calculated improvement]
+
+### Test Results
+- Test suite: 21/21 passed
+- Production validation: 7 days
+- Edge cases: [documented]
+
+## Implementation
+
+\`\`\`python
+# Working code example
+\`\`\`
+
+## Production Considerations
+
+- Scaling: [how it scales]
+- Edge cases: [known limitations]
+- Monitoring: [what to track]
+
+## Lessons Learned
+
+[What we learned that others should know]
+
+## References
+
+- [Links to research, PRs, production metrics]
+```
+
+## Real EUREKA Examples
+
+### E-001: Skills CLI Token Optimization
+
+**Field**: Token Optimization  
+**Improvement**: 70% token reduction  
+**File**: `SKILLS_CLI_TOKEN_OPTIMIZATION.md`
+
+**Discovery**: Using Skills CLI with progressive disclosure instead of sending full MCP specs reduces tokens by 70%.
+
+**Validation**:
+```
+Before (MCP direct):  10,000 tokens/request
+After (Skills CLI):   3,000 tokens/request
+ROI:                  70% reduction
+Cost savings:         $0.15 → $0.045 per request (Gemini 2.0)
+```
+
+### E-004: Semantic Cache
+
+**Field**: Cost Optimization  
+**Improvement**: 50% free tier cost reduction  
+**File**: `EUREKA_cache-semantica.md`
+
+**Discovery**: Semantic similarity cache (cosine > 0.95) prevents redundant API calls for similar queries.
+
+**Validation**:
+```
+Pattern: "How to deploy FastAPI?" vs "FastAPI deployment guide"
+Similarity: 0.97 (cache hit)
+Free tier savings: 50% of quota preserved
+```
+
+### E-002: Multi-Agent Consensus
+
+**Field**: Multi-Agent Decision Making  
+**Improvement**: Weighted CRITIC/ADVOCATE/PRAGMATIC/JUDGE system  
+**File**: `EUREKA_MULTI_AGENT_CONSENSUS_2026.md`
+
+**Discovery**: 4-role consensus with weighted voting outperforms single-agent decisions.
+
+**Validation**:
+```
+Single agent accuracy:    72%
+Consensus accuracy:       89%
+Improvement:              +17 percentage points
+Test cases:               156 technical decisions
+```
+
+### E-003: Batch Handler
+
+**Field**: Parallel Processing  
+**Improvement**: Priority queue with parallel batching  
+**File**: `EUREKA_BATCH_HANDLER_2026.md`
+
+**Discovery**: Parallel batching with priority queue + circuit breaker handles production load.
+
+**Validation**:
+```
+Test suite:     21/21 passed
+Throughput:     1000 items/sec (vs 50 sequential)
+Latency p99:    120ms (vs 2000ms)
+Production:     30 days stable
+```
+
+### E-063: Hybrid Search RRF
+
+**Field**: Search Optimization  
+**Improvement**: +9.3% relevance with RRF fusion  
+**File**: `EUREKA_HYBRID_SEARCH_RRF_2026.md`
+
+**Discovery**: Reciprocal Rank Fusion of vector + BM25 keyword search beats either alone.
+
+**Validation**:
+```
+Vector-only:     0.78 relevance score
+Keyword-only:    0.71 relevance score
+Hybrid (RRF):    0.85 relevance score (+9.3%)
+Dataset:         9,753 vectors, 300 test queries
+```
+
+## Current EUREKA Inventory
+
+As of 2026-03: **105 EUREKA documents**
+
+### Breakdown
+- 73 EUREKA discoveries
+- 17 ATOM patterns (atomic optimizations)
+- 15 review logs
+
+### Top Categories
+
+| Category | Count | Example |
+|----------|------:|---------|
+| MCP Architecture | 12 | MCP_ARCHITECTURE_PATTERNS_2026 |
+| Multi-Agent Systems | 8 | MULTI_AGENT_CONSENSUS_2026 |
+| Optimization | 15 | PROMPT_COMPRESSION_2026 |
+| RAG Patterns | 7 | HYBRID_RAG_FINETUNING_2026 |
+| Security | 5 | MCP_SECURITY_ZEROTRUST_2026 |
+| Search/Retrieval | 6 | LANCEDB_ADVANCED_SEARCH_2026 |
+| Production Patterns | 18 | HEALTH_MONITOR_2026 |
+| Testing/Validation | 4 | SKILLSBENCH_VALIDATION_2026 |
+| Cost Reduction | 6 | FREE_EMBEDDINGS_STRATEGY |
+| Agent Coordination | 9 | AGENTIC_RAG_ARCHITECTURES_2026 |
+| Infrastructure | 8 | GITHUB_ACTIONS_CICD_2026 |
+| Domain Modeling | 7 | CQRS_READ_WRITE_SEPARATION_2026 |
+
+### Notable EUREKAs
+
+**Token/Cost Optimization**:
+- `SKILLS_CLI_TOKEN_OPTIMIZATION` — 70% token reduction
+- `EUREKA_cache-semantica` — 50% free tier savings
+- `FREE_EMBEDDINGS_STRATEGY` — Zero-cost embedding fallback
+- `PROMPT_COMPRESSION_2026` — Compress before truncate
+
+**Architecture**:
+- `MCP_ARCHITECTURE_PATTERNS_2026` — Production MCP patterns
+- `FIVE_LAYER_KNOWLEDGE_PIPELINE` — This pipeline system
+- `PER_CLI_HANDSHAKE_ARCHITECTURE_2026` — Multi-CLI orchestration
+- `COMPOSITION_ROOT_DI_PYTHON_2026` — DI container pattern
+
+**Multi-Agent**:
+- `MULTI_AGENT_CONSENSUS_2026` — 4-role weighted voting
+- `MULTI_AGENT_PATTERNS_2026` — Coordination strategies
+- `AGENTIC_RAG_ARCHITECTURES_2026` — RAG with agent routing
+
+**Production Reliability**:
+- `BATCH_HANDLER_2026` — 21/21 tests, 1000 items/sec
+- `HEALTH_MONITOR_2026` — HEALTHY/DEGRADED/DOWN states
+- `ERROR_CLASSIFIER_2026` — 10 categories, 8 recovery strategies
+- `CONVERSATION_MANAGER_2026` — Multi-turn truncation
+
+**Search/Retrieval**:
+- `HYBRID_SEARCH_RRF_2026` — +9.3% relevance
+- `LANCEDB_ADVANCED_SEARCH_2026` — Vector + FTS fusion
+- `HYBRID_SEARCH_STRATEGIES_2026` — Alpha-weighted RRF
+
+**Security**:
+- `MCP_SECURITY_ZEROTRUST_2026` — Zero-trust MCP
+- `MCP_SECURITY_ARXIV_2026` — Research-backed security
+- `LLM_GUARDRAILS_PRODUCTION_2026` — Production guardrails
+
+## Validation Process
+
+### Phase 1: ROI Measurement
+
+1. **Establish baseline**: Measure current performance
+2. **Implement change**: Deploy optimization
+3. **Measure improvement**: Collect post-change metrics
+4. **Calculate ROI**: Quantify improvement
+
+```python
+# Example: Token optimization validation
+baseline_tokens = measure_tokens(use_mcp_direct=True, n=100)
+optimized_tokens = measure_tokens(use_skills_cli=True, n=100)
+roi_percent = (baseline - optimized) / baseline * 100
+
+if roi_percent >= 10:  # 10% minimum improvement
+    status = "VALIDATED"
+```
+
+### Phase 2: Test Suite
+
+Every EUREKA requires passing tests:
+
+```python
+class TestEureka:
+    def test_baseline_scenario(self):
+        """Test original problem exists."""
+    
+    def test_solution_works(self):
+        """Test solution solves problem."""
+    
+    def test_edge_cases(self):
+        """Test boundary conditions."""
+    
+    def test_production_load(self):
+        """Test under production-like load."""
+    
+    def test_rollback(self):
+        """Test graceful degradation."""
+```
+
+### Phase 3: Production Validation
+
+- **Minimum runtime**: 7 days in production
+- **Monitoring**: Metrics tracked continuously
+- **Incident count**: Must not introduce regressions
+- **Rollback plan**: Documented and tested
+
+### Phase 4: Peer Review
+
+- Technical review by 2+ engineers
+- Metrics validation by independent reviewer
+- Documentation completeness check
+- Production readiness checklist
+
+## EUREKA Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  1. Hypothesis                                          │
+│     "Batch embedding might be faster"                  │
+└─────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│  2. Experimentation                                     │
+│     Implement, measure baseline vs optimized           │
+└─────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│  3. Validation                                          │
+│     ROI: 63x speedup (1200ms → 19ms)                   │
+└─────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│  4. Documentation                                       │
+│     Write EUREKA doc with metrics, code, lessons       │
+└─────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│  5. Production Deployment                               │
+│     30 days stable → EUREKA confirmed                  │
+└─────────────────────────────────────────────────────────┘
+                       ↓
+┌─────────────────────────────────────────────────────────┐
+│  6. SOTA Promotion (optional)                           │
+│     Multi-system validation → SOTA pattern             │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Degradation Triggers
+
+A EUREKA is degraded back to Truth/Skill when:
+
+- **New approach discovered**: Better solution with superior ROI
+- **Metrics disproven**: Independent validation fails to reproduce
+- **Context changed**: Stack version makes pattern obsolete
+- **Production failure**: Causes incidents in production
+
+## ATOM Pattern
+
+ATOMs are micro-EUREKAs—small, atomic optimizations:
+
+```markdown
+# ATOM-001: Cache Key Normalization
+
+**ROI**: 12% cache hit rate improvement
+
+**Pattern**:
+\`\`\`python
+def normalize_cache_key(query: str) -> str:
+    return query.lower().strip()
+\`\`\`
+
+**Metric**: Cache hit rate 0.65 → 0.73 (+12%)
+```
+
+**Current ATOMs**: 17 active
+
+## Promotion to SOTA
+
+EUREKAs can be promoted to [SOTA](/concepts/knowledge-pipeline#layer-5-sota) when:
+
+1. **Multi-system validation**: Works across 3+ production systems
+2. **Scale proven**: Handles enterprise-level load
+3. **Industry adoption**: Referenced by external teams/companies
+4. **Time-tested**: 90+ days production stable
+
+Example:
+
+```
+EUREKA: HYBRID_SEARCH_RRF_2026 (+9.3% relevance)
+→ Deployed to 5 production systems
+→ Handles 10M searches/day
+→ Adopted by 3 external companies
+→ 120 days stable
+
+→ SOTA: Hybrid Search Standard
+```
+
+## Usage in MidOS
+
+### Query EUREKAs
+
+```python
+from midos import search_memory
+
+# Search EUREKA layer
+results = search_memory(
+    query="token optimization patterns",
+    top_k=5,
+    metadata_filter={"layer": "EUREKA"}
+)
+
+for result in results:
+    print(f"EUREKA: {result['source']}")
+    print(f"ROI: {result['metadata']['improvement']}")
+```
+
+### Get EUREKA Details
+
+```python
+from midos import get_eureka
+
+# Load full EUREKA content
+eureka = get_eureka("SKILLS_CLI_TOKEN_OPTIMIZATION")
+print(eureka["improvement"])  # "70% token reduction"
+print(eureka["validation"])   # Metrics and test results
+print(eureka["implementation"])  # Code examples
+```
+
+### CLI Usage
+
+```bash
+# List all EUREKAs
+midos eureka list
+
+# Search by field
+midos eureka search --field "optimization"
+
+# Show EUREKA details
+midos eureka show SKILLS_CLI_TOKEN_OPTIMIZATION
+
+# Validate EUREKA (re-run tests)
+midos eureka validate E-001
+```
+
+## Best Practices
+
+### For EUREKA Authors
+
+1. **Measure everything**
+   - Baseline before optimization
+   - Multiple data points (not single test)
+   - Statistical significance (n ≥ 30)
+
+2. **Document the journey**
+   - What didn't work
+   - Why you tried this approach
+   - Lessons learned
+
+3. **Include reproduction steps**
+   - Exact versions tested
+   - Test data/fixtures
+   - Expected results
+
+4. **Be honest about limitations**
+   - What scenarios it doesn't cover
+   - Trade-offs made
+   - When NOT to use this pattern
+
+5. **Provide rollback plan**
+   - How to revert if it fails
+   - Graceful degradation
+   - Feature flags
+
+### For EUREKA Consumers
+
+1. **Verify compatibility**
+   - Check versions match your stack
+   - Review production considerations
+   - Test in staging first
+
+2. **Measure independently**
+   - Don't trust claimed ROI blindly
+   - Measure in your own context
+   - Compare apples-to-apples
+
+3. **Adapt to your context**
+   - EUREKAs are proven patterns, not copy-paste
+   - Consider your scale, constraints
+   - May need adjustments
+
+4. **Report results**
+   - Share your metrics (confirm or refute)
+   - File issues if patterns don't work
+   - Contribute improvements
+
+## Contributing EUREKAs
+
+### Submission Checklist
+
+- [ ] Clear hypothesis and problem statement
+- [ ] Baseline measurements documented
+- [ ] Solution implemented with code
+- [ ] ROI calculated with metrics
+- [ ] Test suite passes (≥90% coverage)
+- [ ] Production validation (≥7 days)
+- [ ] Peer reviewed
+- [ ] Rollback plan documented
+- [ ] Lessons learned captured
+
+### Review Process
+
+1. **Technical review**: Code quality, implementation
+2. **Metrics review**: ROI validation, statistical significance
+3. **Documentation review**: Completeness, clarity
+4. **Production review**: Stability, monitoring, rollback
+
+**Approval threshold**: 2/3 reviewers approve
+
+## Related Concepts
+
+- [Knowledge Pipeline](/concepts/knowledge-pipeline) — How EUREKAs fit in Layer 4
+- [Skill Packs](/concepts/skill-packs) — Skills promoted to EUREKA with ROI
+- [Semantic Search](/concepts/semantic-search) — How EUREKAs are retrieved
+
+## Implementation Reference
+
+- EUREKA directory: `source/knowledge/EUREKA/`
+- EUREKA catalog: `source/knowledge/EUREKA/EUREKA_CATALOG.md`
+- EUREKA index: `source/knowledge/EUREKA/INDEX.md`
+- Validation framework: `source/tests/eureka/`
