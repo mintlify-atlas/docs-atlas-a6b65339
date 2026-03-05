@@ -1,0 +1,119 @@
+---
+title: "pool_signal"
+description: "Signal actions to the multi-instance coordination pool"
+---
+
+## Overview
+
+Signal an action to the multi-instance coordination pool. Used for coordinating work across multiple MidOS instances to prevent conflicts and enable parallel research.
+
+## Function Signature
+
+```python
+async def pool_signal(
+    action: str,
+    topic: str,
+    summary: str,
+    affects: str = ""
+) -> str
+```
+
+**Source**: `modules/mcp_server/midos_mcp.py:469-487`
+
+## Parameters
+
+<ParamField path="action" type="string" required>
+  Action type. Valid values:
+  - `completed` - Task has been finished
+  - `blocked` - Task is blocked and needs attention
+  - `claimed` - Claiming ownership of a task
+  - `signaling` - Broadcasting information to other instances
+</ParamField>
+
+<ParamField path="topic" type="string" required>
+  Topic or task name being signaled about
+</ParamField>
+
+<ParamField path="summary" type="string" required>
+  Brief description of the action or status update
+</ParamField>
+
+<ParamField path="affects" type="string" default="">
+  Optional. Files or resources affected by this action
+</ParamField>
+
+## Response
+
+Returns a confirmation message:
+
+```
+Pool signal sent: completed - research_topic_x
+Success: True
+```
+
+If there's an error accessing the pool:
+
+```
+Pool signal error: [error message]
+```
+
+## Usage Examples
+
+### Signal task completion
+
+```python
+pool_signal(
+    action="completed",
+    topic="fastapi_advanced_patterns",
+    summary="Completed research and added 15 new chunks",
+    affects="knowledge/chunks/fastapi/"
+)
+```
+
+### Claim a task
+
+```python
+pool_signal(
+    action="claimed",
+    topic="react19_server_components",
+    summary="Starting research on React 19 Server Components"
+)
+```
+
+### Signal a blocker
+
+```python
+pool_signal(
+    action="blocked",
+    topic="kubernetes_operators",
+    summary="Need access to k8s cluster for testing",
+    affects="guides/kubernetes/"
+)
+```
+
+## How It Works
+
+The multi-instance pool coordination system:
+
+1. **Shared State**: Maintains shared state in `synapse/pool/`
+2. **Signal Broadcast**: Writes signal to pool state file
+3. **Instance Discovery**: Other instances pick up signals on next sync
+4. **Conflict Prevention**: Prevents duplicate work across instances
+
+## Use Cases
+
+- **Parallel Research**: Multiple agents researching different topics
+- **Task Coordination**: Claiming and completing work items
+- **Status Broadcasting**: Keeping all instances informed
+- **Conflict Resolution**: Signaling blocks or dependencies
+
+## Requirements
+
+<Note>
+  This tool requires the instance pool coordination system to be configured. Self-hosted instances need the `hooks/instance_pool.py` module.
+</Note>
+
+## Related Tools
+
+- [`pool_status`](/api/advanced/pool-status) - View current pool state and activity
+- [`project_status`](/api/system/project-status) - Overall system status

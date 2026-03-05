@@ -192,14 +192,14 @@ Now search for what you need. MidOS provides multiple search strategies:
     **Best for**: Finding specific functions, error messages, or exact terminology
   </Tab>
 
-  <Tab title="Smart Search">
-    Automatic mode selection (keyword, semantic, or hybrid):
+  <Tab title="Default Choice">
+    For most queries, use semantic search (which includes hybrid matching internally):
 
     ```python
-    smart_search("PostgreSQL JSONB indexing strategies")
+    semantic_search("PostgreSQL JSONB indexing strategies")
     ```
 
-    **Best for**: When you're not sure which search strategy to use
+    **Best for**: Most general queries - combines vector + keyword matching
   </Tab>
 </Tabs>
 

@@ -8,6 +8,10 @@ icon: 'brain'
 
 Semantic search uses LanceDB vector embeddings powered by Google Gemini (`gemini-embedding-001`, 3072 dimensions) to find conceptually relevant content, not just keyword matches.
 
+<Note>
+  **Hybrid Search Architecture**: Internally, `semantic_search` uses a hybrid approach combining vector similarity with keyword matching (BM25) and Reciprocal Rank Fusion (RRF). This provides superior results over pure vector or keyword search alone. The underlying implementation is in `hive_commons/src/hive_commons/vector_store.py`.
+</Note>
+
 **When to use**: Natural language queries, conceptual searches, when exact keywords are unknown, or when you need synonym-aware search.
 
 ## Function Signature
@@ -335,6 +339,5 @@ result = await semantic_search("query")
 ## Related Tools
 
 - [`search_knowledge`](/api/search/search-knowledge) - Fast keyword search
-- [`hybrid_search`](/api/search/hybrid-search) - Combines semantic + keyword with RRF
-- [`smart_search`](/api/search/smart-search) - Auto-detects optimal search mode
 - [`list_skills`](/api/knowledge/list-skills) - Stack-filtered skill browsing
+- [`get_skill`](/api/knowledge/get-skill) - Retrieve specific skills

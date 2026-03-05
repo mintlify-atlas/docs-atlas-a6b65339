@@ -1,0 +1,114 @@
+---
+title: "pool_status"
+description: "Get multi-instance coordination pool status and recent activity"
+---
+
+## Overview
+
+Get the current status of the multi-instance coordination pool, including recent signals, active tasks, and instance activity.
+
+## Function Signature
+
+```python
+async def pool_status() -> str
+```
+
+**Source**: `modules/mcp_server/midos_mcp.py:490-505`
+
+## Parameters
+
+This tool takes no parameters.
+
+## Response Format
+
+Returns a formatted status report with:
+
+```
+Recent Activity:
+- [timestamp] instance_1: completed research_topic_x
+- [timestamp] instance_2: claimed react_patterns_research
+- [timestamp] instance_3: blocked on database_migration
+
+### Statistics
+{
+  "total_signals": 156,
+  "active_instances": 3,
+  "completed_tasks": 45,
+  "claimed_tasks": 12,
+  "blocked_tasks": 2,
+  "last_sync": "2026-03-05T10:30:00Z"
+}
+```
+
+## Usage Example
+
+```python
+pool_status()
+```
+
+## Response Fields
+
+<ResponseField name="total_signals" type="number">
+  Total number of signals sent to the pool
+</ResponseField>
+
+<ResponseField name="active_instances" type="number">
+  Number of MidOS instances currently active
+</ResponseField>
+
+<ResponseField name="completed_tasks" type="number">
+  Tasks marked as completed
+</ResponseField>
+
+<ResponseField name="claimed_tasks" type="number">
+  Tasks currently claimed by instances
+</ResponseField>
+
+<ResponseField name="blocked_tasks" type="number">
+  Tasks marked as blocked
+</ResponseField>
+
+<ResponseField name="last_sync" type="string">
+  Timestamp of last pool synchronization
+</ResponseField>
+
+## How It Works
+
+1. **Load Pool State**: Reads from `synapse/pool/state.json`
+2. **Parse Activity**: Extracts recent signals and actions
+3. **Calculate Stats**: Aggregates metrics across all instances
+4. **Format Output**: Returns human-readable status report
+
+## Use Cases
+
+- **Monitoring**: Check coordination health across instances
+- **Debugging**: Identify conflicts or blocked tasks
+- **Visibility**: See what other instances are working on
+- **Metrics**: Track overall research productivity
+
+## Activity Types
+
+The status report shows signals by action type:
+
+| Action | Description |
+|--------|-------------|
+| `completed` | Tasks that have been finished |
+| `claimed` | Tasks currently being worked on |
+| `blocked` | Tasks waiting for resolution |
+| `signaling` | General status updates |
+
+## Requirements
+
+<Note>
+  This tool requires the instance pool coordination system. Self-hosted instances need `hooks/instance_pool.py` configured.
+</Note>
+
+<Info>
+  If the pool system is not configured or encounters an error, the tool will return an error message instead of the status report.
+</Info>
+
+## Related Tools
+
+- [`pool_signal`](/api/advanced/pool-signal) - Send signals to the coordination pool
+- [`project_status`](/api/system/project-status) - Overall MidOS system status
+- [`hive_status`](/api/system/hive-status) - Knowledge base health metrics

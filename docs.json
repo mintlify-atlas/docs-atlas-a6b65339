@@ -81,9 +81,7 @@
             "group": "Search Tools",
             "pages": [
               "api/search/search-knowledge",
-              "api/search/semantic-search",
-              "api/search/hybrid-search",
-              "api/search/smart-search"
+              "api/search/semantic-search"
             ]
           },
           {
@@ -111,6 +109,15 @@
               "api/system/hive-status",
               "api/system/project-status",
               "api/system/memory-stats"
+            ]
+          },
+          {
+            "group": "Advanced Tools",
+            "pages": [
+              "api/advanced/research-youtube",
+              "api/advanced/pool-signal",
+              "api/advanced/pool-status",
+              "api/advanced/agent-bootstrap"
             ]
           }
         ]

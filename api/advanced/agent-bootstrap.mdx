@@ -1,0 +1,95 @@
+---
+title: "agent_bootstrap"
+description: "[DEPRECATED] Generic agent onboarding - use agent_handshake instead"
+---
+
+<Warning>
+  **DEPRECATED**: This tool is deprecated. Use [`agent_handshake`](/api/agent/agent-handshake) instead for personalized agent onboarding.
+</Warning>
+
+## Overview
+
+Generic agent onboarding that returns default configuration for unknown agents. This tool has been superseded by `agent_handshake`, which provides personalized configuration based on your model, client, and technology stack.
+
+## Function Signature
+
+```python
+async def agent_bootstrap() -> str
+```
+
+**Source**: `modules/mcp_server/midos_mcp.py:779-787`
+
+## Parameters
+
+This tool takes no parameters.
+
+## Response
+
+Returns a default agent configuration with:
+- Generic tool recommendations
+- Standard search strategies
+- Basic skill pack suggestions
+- Default context window assumptions
+
+## Why It's Deprecated
+
+`agent_bootstrap` provides one-size-fits-all configuration that doesn't account for:
+- Your specific model's capabilities (context window, reasoning style)
+- Your CLI/IDE environment (Claude Code, Cursor, Windsurf, Cline)
+- Your technology stack (languages and frameworks)
+- Your project goals
+
+## Migration Guide
+
+### Old approach (deprecated):
+
+```python
+agent_bootstrap()
+```
+
+### New approach (recommended):
+
+```python
+agent_handshake(
+    model="claude-opus-4-6",
+    client="claude-code",
+    languages="python,typescript",
+    frameworks="fastapi,react",
+    project_goal="Building a real-time WebSocket API"
+)
+```
+
+## What agent_handshake Provides
+
+The new `agent_handshake` tool offers:
+
+1. **Model-Aware Configuration**
+   - Context window optimization (small/medium/large tiers)
+   - Model-specific reasoning strategies
+   - Capability detection (31+ models supported)
+
+2. **Client-Specific Profiles**
+   - CLI tool capabilities and restrictions
+   - Delegation strategies
+   - Hook and memory integration
+
+3. **Stack-Aware Recommendations**
+   - Skills prioritized by your languages and frameworks
+   - Technology-specific search strategies
+   - Relevant EUREKA discoveries for your stack
+
+4. **Project Context**
+   - Goal-aligned knowledge retrieval
+   - Domain-specific guidance
+   - Targeted skill recommendations
+
+## Related Tools
+
+- [`agent_handshake`](/api/agent/agent-handshake) - **Use this instead** for personalized onboarding
+- [`project_status`](/api/system/project-status) - Live system status and tool guide
+
+## Additional Notes
+
+<Info>
+  While `agent_bootstrap` still works, it will be removed in a future version. Update your MCP configurations to use `agent_handshake` for better results.
+</Info>

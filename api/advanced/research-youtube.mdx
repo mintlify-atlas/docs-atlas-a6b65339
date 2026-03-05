@@ -1,0 +1,95 @@
+---
+title: "research_youtube"
+description: "Queue YouTube videos for automated research and transcription"
+---
+
+## Overview
+
+Queue a YouTube video for research. MidOS will transcribe the content and extract insights for inclusion in the knowledge base.
+
+## Function Signature
+
+```python
+async def research_youtube(url: str, priority: str = "normal") -> str
+```
+
+**Source**: `modules/mcp_server/midos_mcp.py:418-456`
+
+## Parameters
+
+<ParamField path="url" type="string" required>
+  YouTube URL to research. Must be a valid youtube.com or youtu.be URL.
+</ParamField>
+
+<ParamField path="priority" type="string" default="normal">
+  Research priority level. Options: `high`, `normal`, `low`
+</ParamField>
+
+## Response
+
+Returns a confirmation message with the queued research task:
+
+```
+YouTube research queued: https://youtube.com/watch?v=example
+Priority: normal
+Command file: CMD_youtube_1234567890.json
+```
+
+## Usage Examples
+
+### Queue a video for research
+
+```python
+research_youtube(
+    url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    priority="normal"
+)
+```
+
+### High-priority research
+
+```python
+research_youtube(
+    url="https://youtu.be/abc123xyz",
+    priority="high"
+)
+```
+
+## How It Works
+
+1. **Validation**: Verifies URL is a valid YouTube link (youtube.com, youtu.be, m.youtube.com)
+2. **Command Creation**: Creates a research command in `synapse/inbox/`
+3. **Queue Processing**: Background worker transcribes video and extracts insights
+4. **Knowledge Integration**: Insights are added to the knowledge base after review
+
+## URL Validation
+
+The tool validates:
+- URL scheme must be `http` or `https`
+- Hostname must be one of: `youtube.com`, `www.youtube.com`, `youtu.be`, `m.youtube.com`
+- URL length must be less than 2048 characters
+
+Invalid URLs will raise a `ToolError`.
+
+## Priority Levels
+
+| Priority | Description | Processing |
+|----------|-------------|------------|
+| `high` | Urgent research needs | Processed first in queue |
+| `normal` | Standard research | Processed in order |
+| `low` | Background research | Processed when idle |
+
+## Notes
+
+<Note>
+  This tool requires video transcription dependencies. Self-hosted instances need the `video` optional dependencies installed: `pip install -e ".[video]"`
+</Note>
+
+<Warning>
+  Transcription can take several minutes depending on video length. Results are not immediate.
+</Warning>
+
+## Related Tools
+
+- [`project_status`](/api/system/project-status) - Check research queue status
+- [`search_knowledge`](/api/search/search-knowledge) - Search for transcribed content after processing
